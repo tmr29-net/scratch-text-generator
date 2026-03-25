@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scratch Text Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=Kiwi+Maru&family=M+PLUS+Rounded+1c:wght@400;700;900&family=Mochiy+Pop+P&family=Noto+Sans+JP:wght@400;700;900&family=Rampart+One&family=Reggae+One&family=RocknRoll+One&family=Stick&family=Train+One&family=Yusei+Magic&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --bg-color: #0f172a; 
+            --text-color: #f8fafc; 
+            --panel-bg: #1e293b; 
+            --panel-border: #334155; 
+            --input-bg: #0f172a; 
+            --accent-color: #3b82f6; 
+            --danger-bg: #ef4444;
+            --success-bg: #10b981;
+            --menu-hover: #2563eb;
+            --tab-bg: #0f172a;
+        }
+        [data-theme="light"] { 
+            --bg-color: #f1f5f9; 
+            --text-color: #1e293b; 
+            --panel-bg: #ffffff; 
+            --panel-border: #cbd5e1; 
+            --input-bg: #f8fafc; 
+            --accent-color: #2563eb; 
+            --menu-hover: #bfdbfe;
+            --tab-bg: #e2e8f0;
+        }
+        
+        *, *::before, *::after { box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-color); 
+            margin: 0; padding: 0; 
+            min-height: 100vh;
+            overflow-y: scroll;
+        }
+        
+        button, input, select, textarea { font-family: inherit; }
+        button { cursor: pointer; border-radius: 6px; border: none; font-weight: bold; transition: 0.2s; }
+        button:hover:not(:disabled) { filter: brightness(1.1); }
+        
+        /* メニューバー */
+        .menu-bar { background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); display: flex; align-items: center; padding: 0 12px; height: 32px; font-size: 0.85em; user-select: none; position: sticky; top: 0; z-index: 2000; }
+        .menu-item { padding: 0 12px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; color: var(--text-color); }
+        .menu-item:hover, .menu-item.active { background: var(--menu-hover); color: [data-theme="light"] ? var(--text-color) : white; }
+        [data-theme="dark"] .menu-item:hover, [data-theme="dark"] .menu-item.active { color: white; }
+        [data-theme="light"] .menu-item:hover, [data-theme="light"] .menu-item.active { color: #1e293b; }
+
+        .header-title { position: absolute; right: 16px; font-weight: normal; font-size: 1.1em; pointer-events: none; color: var(--text-color); letter-spacing: 0.05em; }
+        body[data-layout="mobile"] .header-title { display: none; }
+
+        .dropdown { display: none; position: absolute; top: 32px; left: 0; background: var(--panel-bg); border: 1px solid var(--panel-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 220px; white-space: nowrap; padding: 6px 0; border-radius: 0 0 6px 6px; z-index: 2001; }
+        .dropdown.show { display: block; }
+        .dropdown-item { padding: 8px 16px; cursor: pointer; color: var(--text-color); display: flex; justify-content: space-between; gap: 24px; align-items: center; }
+        .dropdown-item:hover { background: var(--menu-hover); }
+        .dropdown-item.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+        
+        [data-theme="dark"] .dropdown-item:hover:not(.disabled) { color: white; }
+        [data-theme="light"] .dropdown-item:hover:not(.disabled) { color: #1e293b; }
+        .dropdown-divider { height: 1px; background: var(--panel-border); margin: 6px 0; }
+        .shortcut { opacity: 0.6; font-size: 0.9em; text-align: right;}
+
+        /* モバイル用タブバー */
+        .mobile-tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: var(--panel-bg); border-top: 1px solid var(--panel-border); display: none; z-index: 2000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .tab-btn { flex: 1; background: transparent; color: var(--text-color); border: none; font-size: 0.9em; border-radius: 0; opacity: 0.6; font-weight: bold; letter-spacing: 0.05em; }
+        .tab-btn.active { opacity: 1; background: var(--tab-bg); border-top: 3px solid var(--accent-color); }
+
+        /* 大枠のレイアウト */
+        .main-wrapper { display: grid; gap: 20px; padding: 20px; max-width: 1100px; margin: 0 auto; width: 100%; align-items: start; }
+
+        body[data-layout="pc"] .main-wrapper { grid-template-columns: 320px 1fr; grid-template-rows: auto 1fr; }
+        body[data-layout="pc"] .preset-area { grid-column: 1; grid-row: 1 / 3; position: sticky; top: 52px; max-height: calc(100vh - 70px); overflow-y: auto; padding-right: 8px;}
+        body[data-layout="pc"] .preview-area { grid-column: 2; grid-row: 1; position: sticky; top: 52px; z-index: 1000; background: var(--bg-color); padding-bottom: 8px;}
+        body[data-layout="pc"] .editor-area { grid-column: 2; grid-row: 2; justify-self: center; } 
+        
+        body[data-layout="mobile"] .main-wrapper { grid-template-columns: 1fr; grid-template-rows: auto 1fr; padding: 12px; padding-bottom: 70px; gap: 12px; }
+        body[data-layout="mobile"] .preview-area { grid-column: 1; grid-row: 1; position: sticky; top: 32px; z-index: 1000; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: var(--bg-color); padding-bottom: 6px;}
+        body[data-layout="mobile"] .mobile-tab-bar { display: flex; }
+        
+        body[data-layout="mobile"][data-tab="editor"] .preset-area { display: none; }
+        body[data-layout="mobile"][data-tab="editor"] .editor-area { grid-column: 1; grid-row: 2; display: block; }
+        body[data-layout="mobile"][data-tab="preset"] .editor-area { display: none; }
+        body[data-layout="mobile"][data-tab="preset"] .preset-area { grid-column: 1; grid-row: 2; display: block; margin: 0 auto; width: 100%; max-width: 600px; } 
+
+        .scratch-screen { width: 100%; max-width: 400px; margin: 0 auto; aspect-ratio: 4 / 3; height: auto; border: 1px solid var(--panel-border); border-radius: 8px; background-color: #fff; position: relative; overflow: hidden; }
+        #previewCanvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .editor-area { width: 100%; max-width: 600px; margin: 0 auto; }
+
+        /* プリセットエリア */
+        .preset-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; margin-bottom: 10px; }
+        .preset-preview-box { border-radius: 7px 7px 0 0; height: 60px; display: flex; justify-content: center; align-items: center; background-image: linear-gradient(45deg, rgba(128,128,128,0.2) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.2) 75%, rgba(128,128,128,0.2)), linear-gradient(45deg, rgba(128,128,128,0.2) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.2) 75%, rgba(128,128,128,0.2)); background-size: 16px 16px; background-position: 0 0, 8px 8px; border-bottom: 1px solid var(--panel-border); overflow: hidden;}
+        .preset-sample-text { font-size: 24px; white-space: nowrap; line-height: 1; }
+        .preset-info { padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; }
+        .preset-name-disp { font-weight: bold; font-size: 0.85em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;}
+        
+        /* エディタアイテム */
+        .item { background: var(--panel-bg); margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--panel-border); transition: 0.2s; overflow: hidden; }
+        .item.active { border: 1px solid var(--accent-color); box-shadow: 0 0 0 1px var(--accent-color); }
+        .item-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; cursor: pointer; background: rgba(0,0,0,0.05); }
+        .header-summary { font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin-right: 12px; font-weight: 600; }
+        .header-controls { display: flex; gap: 4px; }
+        .item-body { display: none; padding: 12px; border-top: 1px solid var(--panel-border); }
+        .item.active .item-body { display: block; }
+        
+        .controls-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.85em; margin-top: 10px; }
+        
+        .control-unit { display: flex; flex-direction: column; }
+        label { font-size: 0.75em; color: var(--text-color); opacity: 0.8; font-weight: 600; display: block; margin-bottom: 4px; }
+        
+        textarea.txt, select, input[type="text"] { width: 100%; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.9em; height: 34px; box-sizing: border-box; }
+        textarea.txt { padding: 6px 8px; height: 50px; resize: vertical; line-height: 1.4; }
+        select { padding: 0 4px; line-height: 32px; } 
+        
+        textarea.txt:focus, select:focus { outline: none; border-color: var(--accent-color); }
+        input[type="color"] { width: 100%; height: 34px; padding: 1px; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; background: var(--input-bg); }
+        
+        .slider-group { display: flex; gap: 8px; align-items: center; width: 100%; }
+        .slider-group input[type="range"] { flex: 1; margin: 0; accent-color: var(--accent-color); height: 16px; }
+        input[type="number"].num-input { width: 56px; padding: 4px; height: 34px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.85em; text-align: right; }
+        input[type="number"].num-input:focus { outline: none; border-color: var(--accent-color); }
+
+        .btn-icon { width: 26px; height: 26px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 0.9em; line-height: 1; }
+        .btn-mode { background: var(--panel-border); color: var(--text-color); }
+        .add-btn { background: var(--success-bg); color: white; padding: 10px; width: 100%; margin-bottom: 12px; font-size: 0.9em; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .apply-btn { background: var(--accent-color); color: white; padding: 6px 14px; font-size: 0.85em; }
+        .font-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; }
+
+        .preset-area::-webkit-scrollbar { width: 6px; }
+        .preset-area::-webkit-scrollbar-track { background: transparent; }
+        .preset-area::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+    </style>
+</head>
+<body data-theme="dark" data-layout="pc" data-tab="editor">
+
+<div class="menu-bar">
+    <div class="header-title">Scratch Text Generator</div>
+    <div class="menu-item" onclick="toggleMenu('menu-file', event)">ファイル
+        <div class="dropdown" id="menu-file">
+            <div class="dropdown-item" onclick="newProject()"><span>新規作成</span></div>
+            <div class="dropdown-item" onclick="loadProject()"><span>プロジェクトを開く...</span></div>
+            <div class="dropdown-item" onclick="saveProject()"><span>プロジェクトを保存</span><span class="shortcut">Ctrl+S</span></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="exportActiveImage()"><span>選択中の字幕を画像として保存</span></div>
+            <div class="dropdown-item" onclick="exportAllImages()"><span>すべての字幕を画像として保存 (ZIPなし)</span></div>
+            <div class="dropdown-item" onclick="exportImageZip()" style="color: var(--accent-color); font-weight: bold;"><span>名前を付けてZIP保存...</span></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="showAboutDialog()"><span>このサイトについて</span></div>
+        </div>
+    </div>
+    <div class="menu-item" onclick="toggleMenu('menu-edit', event)">編集
+        <div class="dropdown" id="menu-edit">
+            <div class="dropdown-item" id="menu-undo" onclick="undo()"><span>取り消し</span><span class="shortcut">Ctrl+Z</span></div>
+            <div class="dropdown-item" id="menu-redo" onclick="redo()"><span>やり直し</span><span class="shortcut">Ctrl+Y</span></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="addItemAndSave()"><span>新しい字幕を追加</span></div>
+            <div class="dropdown-item" onclick="loadCustomFont()"><span>フォント追加(ttf/otf)...</span></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" id="menu-reset-default" onclick="resetDefaultPreset()"><span>デフォルト設定を初期化</span></div>
+        </div>
+    </div>
+    <div class="menu-item" onclick="toggleMenu('menu-view', event)">表示
+        <div class="dropdown" id="menu-view">
+            <div class="dropdown-item" onclick="setLayout('pc')" style="color:var(--accent-color); font-weight:bold;"><span>PCモードに変更</span></div>
+            <div class="dropdown-item" onclick="setLayout('mobile')" style="color:var(--success-bg); font-weight:bold;"><span>モバイルモードに変更</span></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="toggleTheme()"><span>テーマ切替 (ダーク/ライト)</span></div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="changeBG('bg-black')"><span>プレビュー背景: 黒</span></div>
+            <div class="dropdown-item" onclick="changeBG('bg-white')"><span>プレビュー背景: 白</span></div>
+            <div class="dropdown-item" onclick="changeBG('bg-grid')"><span>プレビュー背景: 格子</span></div>
+            <div class="dropdown-item" onclick="loadBackgroundImage()"><span>プレビュー背景: 画像を読込...</span></div>
+            <div class="dropdown-item" onclick="clearBackgroundImage()" id="menuClearBg" style="display:none; color: var(--danger-bg);"><span>プレビュー背景: 画像をクリア</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="main-wrapper">
+    <div class="preset-area">
+        <button class="add-btn" onclick="saveCurrentStyleAsPreset()" style="background:var(--accent-color);">＋ 今のスタイルを保存</button>
+        <div id="presetList"></div>
+    </div>
+
+    <div class="preview-area">
+        <div id="screen" class="scratch-screen">
+            <canvas id="previewCanvas" width="480" height="360"></canvas>
+        </div>
+    </div>
+
+    <div class="editor-area">
+        <div id="itemList"></div>
+        <button class="add-btn" onclick="addItemAndSave()">＋ 新しい字幕を追加</button>
+    </div>
+</div>
+
+<div class="mobile-tab-bar">
+    <button class="tab-btn active" id="tabBtnEditor" onclick="setMobileTab('editor')">字幕編集</button>
+    <button class="tab-btn" id="tabBtnPreset" onclick="setMobileTab('preset')">プリセット</button>
+</div>
+
+<script>
+    let itemCount = 0;
+    let lastActiveId = 0;
+    let customPresets = []; 
+    let customFonts = []; 
+    let defaultPresetId = null;
+
+    let historyStack = [];
+    let historyIndex = -1;
+    let isUndoing = false;
+
+    // --- Undo / Redo ---
+    function getCurrentState() {
+        return {
+            itemCount: itemCount,
+            lastActiveId: lastActiveId,
+            items: Array.from(document.querySelectorAll('.item')).map(item => ({
+                id: parseInt(item.dataset.id),
+                text: item.querySelector('.txt').value,
+                font: item.querySelector('.fontFamily').value,
+                fWeight: item.querySelector('.fontWeight').value,
+                posX: item.querySelector('.posX').value,
+                posY: item.querySelector('.posY').value,
+                fSize: item.querySelector('.fSize').value,
+                sWidth: item.querySelector('.sWidth').value,
+                fColor: item.querySelector('.fColor').value,
+                sColor: item.querySelector('.sColor').value
+            }))
+        };
+    }
+
+    function saveState() {
+        if (isUndoing) return;
+        const currentState = getCurrentState();
+        historyStack = historyStack.slice(0, historyIndex + 1);
+        if (historyStack.length > 0) {
+            const lastState = historyStack[historyStack.length - 1];
+            if (JSON.stringify(lastState.items) === JSON.stringify(currentState.items) && lastState.lastActiveId === currentState.lastActiveId) {
+                return;
+            }
+        }
+        historyStack.push(currentState);
+        if (historyStack.length > 50) historyStack.shift(); 
+        else historyIndex++;
+    }
+
+    function restoreState(state) {
+        if (!state) return;
+        isUndoing = true;
+        itemCount = state.itemCount;
+        document.getElementById('itemList').innerHTML = '';
+        state.items.forEach(itemData => addItem(itemData, itemData.id));
+        setActive(state.lastActiveId);
+        isUndoing = false;
+    }
+
+    function undo() {
+        if (historyIndex > 0) {
+            historyIndex--;
+            restoreState(historyStack[historyIndex]);
+            closeAllMenus();
+        }
+    }
+
+    function redo() {
+        if (historyIndex < historyStack.length - 1) {
+            historyIndex++;
+            restoreState(historyStack[historyIndex]);
+            closeAllMenus();
+        }
+    }
+
+    // --- UI Control ---
+    function setLayout(mode) {
+        document.body.setAttribute('data-layout', mode);
+        closeAllMenus();
+    }
+
+    function setMobileTab(tab) {
+        document.body.setAttribute('data-tab', tab);
+        document.getElementById('tabBtnEditor').classList.toggle('active', tab === 'editor');
+        document.getElementById('tabBtnPreset').classList.toggle('active', tab === 'preset');
+    }
+
+    function toggleMenu(menuId, event) {
+        event.stopPropagation();
+        const menu = document.getElementById(menuId);
+        const parent = menu.parentElement;
+        const isShowing = menu.classList.contains('show');
+        closeAllMenus();
+        if (!isShowing) { 
+            menu.classList.add('show'); 
+            parent.classList.add('active'); 
+            if (menuId === 'menu-edit') {
+                updateEditMenu();
+            }
+        }
+    }
+
+    function updateEditMenu() {
+        const undoBtn = document.getElementById('menu-undo');
+        const redoBtn = document.getElementById('menu-redo');
+        if (undoBtn) {
+            if (historyIndex > 0) undoBtn.classList.remove('disabled');
+            else undoBtn.classList.add('disabled');
+        }
+        if (redoBtn) {
+            if (historyIndex < historyStack.length - 1) redoBtn.classList.remove('disabled');
+            else redoBtn.classList.add('disabled');
+        }
+        const resetDefaultBtn = document.getElementById('menu-reset-default');
+        if (resetDefaultBtn) {
+            if (defaultPresetId === null) resetDefaultBtn.classList.add('disabled');
+            else resetDefaultBtn.classList.remove('disabled');
+        }
+    }
+
+    // ★修正: プリセットのメニューが見切れないように表示位置を調整
+    function togglePresetMenu(id, event) {
+        event.stopPropagation();
+        const menu = document.getElementById(`preset-menu-${id}`);
+        const isShowing = menu.classList.contains('show');
+        closeAllMenus();
+        if (!isShowing) { 
+            menu.classList.add('show'); 
+            
+            // クリックした位置から画面下部にはみ出るかを判定
+            const rect = event.target.getBoundingClientRect();
+            const menuRect = menu.getBoundingClientRect();
+            
+            if (rect.bottom + menuRect.height > window.innerHeight) {
+                // はみ出る場合は上に開く
+                menu.style.top = 'auto';
+                menu.style.bottom = '100%';
+                menu.style.borderRadius = '6px 0 6px 6px';
+            } else {
+                // はみ出ない場合は下に開く
+                menu.style.top = '100%';
+                menu.style.bottom = 'auto';
+                menu.style.borderRadius = '0 0 6px 6px';
+            }
+        }
+    }
+
+    function closeAllMenus() {
+        document.querySelectorAll('.dropdown').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+    }
+    document.addEventListener('click', closeAllMenus);
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey)) {
+            if (e.key === 's') { e.preventDefault(); saveProject(); } 
+            else if (e.key === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); } 
+            else if (e.key === 'y') { e.preventDefault(); redo(); }
+        }
+    });
+
+    function showAboutDialog() {
+        alert("Scratch Text Generator\nVersion 1.0\n制作：とぅもろー / Geminiで制作");
+        closeAllMenus();
+    }
+
+    // --- Preset Control ---
+    function saveCurrentStyleAsPreset() {
+        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`);
+        if (!item) return alert("保存する字幕が選択されていません。");
+
+        const name = prompt("プリセット名を入力してください:", "マイスタイル");
+        if (!name) return; 
+
+        const newPreset = {
+            id: Date.now(),
+            name: name,
+            posX: item.querySelector('.posX').value, 
+            posY: item.querySelector('.posY').value, 
+            fSize: item.querySelector('.fSize').value, 
+            sWidth: item.querySelector('.sWidth').value, 
+            fColor: item.querySelector('.fColor').value, 
+            sColor: item.querySelector('.sColor').value, 
+            font: item.querySelector('.fontFamily').value, 
+            fWeight: item.querySelector('.fontWeight').value
+        };
+
+        customPresets.push(newPreset);
+        renderPresets();
+        
+        if(document.body.getAttribute('data-layout') === 'mobile') {
+            alert(`「${name}」を保存しました！`);
+        }
+    }
+
+    function renderPresets() {
+        const list = document.getElementById('presetList');
+        list.innerHTML = '';
+        
+        if(customPresets.length === 0) {
+            list.innerHTML = '<div style="text-align:center; opacity:0.5; font-size:0.85em; padding:20px;">プリセットはまだありません。</div>';
+            return;
+        }
+
+        customPresets.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'preset-card';
+            const strokePx = Math.max(0, Math.min(parseInt(p.sWidth) * 0.4, 8)); 
+            const isDefault = (p.id === defaultPresetId);
+            const safeFont = p.font ? p.font.replace(/"/g, '&quot;') : 'sans-serif';
+            
+            div.innerHTML = `
+                <div class="preset-preview-box">
+                    <span class="preset-sample-text" style="
+                        font-family: ${safeFont}; 
+                        font-weight: ${p.fWeight}; 
+                        color: ${p.fColor}; 
+                        -webkit-text-stroke: ${strokePx}px ${p.sColor};
+                        paint-order: stroke fill;
+                    ">あA漢</span>
+                </div>
+                <div class="preset-info">
+                    <div class="preset-name-disp" title="${p.name}">
+                        ${isDefault ? '<span style="font-size:0.7em; background:var(--success-bg); color:white; padding:2px 4px; border-radius:3px; margin-right:4px; vertical-align:middle;">標準</span>' : ''}
+                        ${p.name}
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <button class="apply-btn" onclick="applyPreset(${p.id})">適用</button>
+                        <div style="position:relative;">
+                            <button class="btn-icon" style="background:transparent; color:var(--text-color); font-size:1.2em; border:1px solid var(--panel-border);" onclick="togglePresetMenu(${p.id}, event)">︙</button>
+                            <div class="dropdown" id="preset-menu-${p.id}" style="right:0; left:auto;">
+                                <div class="dropdown-item" onclick="toggleDefaultPreset(${p.id})"><span>${isDefault ? 'デフォルトを解除' : 'デフォルトに設定'}</span></div>
+                                <div class="dropdown-item" onclick="renamePreset(${p.id})"><span>名称変更</span></div>
+                                <div class="dropdown-item" onclick="updatePreset(${p.id})"><span>更新 (今のスタイルで上書き)</span></div>
+                                <div class="dropdown-divider"></div>
+                                <div class="dropdown-item" onclick="deletePreset(${p.id})" style="color:var(--danger-bg);"><span>削除</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function applyPreset(id) {
+        const p = customPresets.find(preset => preset.id === id);
+        if (!p) return;
+        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`); 
+        if(!item) return alert("適用する字幕を選択してください。");
+        
+        item.querySelector('.posX').value = p.posX; item.querySelector('.posX-num').value = p.posX;
+        item.querySelector('.posY').value = p.posY; item.querySelector('.posY-num').value = p.posY;
+        item.querySelector('.fSize').value = p.fSize; item.querySelector('.fSize-num').value = p.fSize;
+        item.querySelector('.sWidth').value = p.sWidth; item.querySelector('.sWidth-num').value = p.sWidth;
+        item.querySelector('.fColor').value = p.fColor; item.querySelector('.sColor').value = p.sColor; 
+        item.querySelector('.fontFamily').value = p.font;
+        item.querySelector('.fontWeight').value = p.fWeight;
+        
+        updatePreviewByElement(item);
+        saveState();
+        
+        if(document.body.getAttribute('data-layout') === 'mobile') {
+            setMobileTab('editor');
+        }
+    }
+
+    function toggleDefaultPreset(id) {
+        if (defaultPresetId === id) defaultPresetId = null; 
+        else defaultPresetId = id; 
+        renderPresets();
+        closeAllMenus();
+    }
+
+    function resetDefaultPreset() {
+        if (defaultPresetId === null) return;
+        defaultPresetId = null;
+        renderPresets();
+        alert("デフォルト設定を初期化しました。\n以降、追加される字幕は標準のスタイルになります。");
+        closeAllMenus();
+    }
+
+    function renamePreset(id) {
+        const p = customPresets.find(preset => preset.id === id);
+        if (!p) return;
+        const newName = prompt("新しい名前を入力してください:", p.name);
+        if (newName && newName.trim() !== "") {
+            p.name = newName.trim();
+            renderPresets();
+        }
+        closeAllMenus();
+    }
+
+    function updatePreset(id) {
+        const p = customPresets.find(preset => preset.id === id);
+        if (!p) return;
+        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`); 
+        if(!item) return alert("現在のスタイルを取得する字幕を選択してください。");
+
+        if(confirm(`プリセット「${p.name}」を、現在選択中のスタイルで上書きしますか？`)) {
+            p.posX = item.querySelector('.posX').value;
+            p.posY = item.querySelector('.posY').value;
+            p.fSize = item.querySelector('.fSize').value;
+            p.sWidth = item.querySelector('.sWidth').value;
+            p.fColor = item.querySelector('.fColor').value;
+            p.sColor = item.querySelector('.sColor').value;
+            p.font = item.querySelector('.fontFamily').value;
+            p.fWeight = item.querySelector('.fontWeight').value;
+            renderPresets();
+        }
+        closeAllMenus();
+    }
+
+    function deletePreset(id) {
+        if(confirm("このプリセットを削除しますか？")) {
+            if (defaultPresetId === id) defaultPresetId = null;
+            customPresets = customPresets.filter(p => p.id !== id);
+            renderPresets();
+        }
+        closeAllMenus();
+    }
+
+    // --- App Actions ---
+    function newProject() {
+        if(confirm("現在の作業内容を破棄して新しく作り直しますか？")) {
+            document.getElementById('itemList').innerHTML = '';
+            itemCount = 0;
+            customPresets = [];
+            customFonts = []; // フォント履歴もクリア
+            defaultPresetId = null;
+            historyStack = []; 
+            historyIndex = -1;
+            renderPresets();
+            addItemAndSave();
+            changeBG('bg-white'); 
+        }
+        closeAllMenus();
+    }
+
+    function loadBackgroundImage() {
+        const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const screen = document.getElementById('screen');
+                screen.style.backgroundImage = `url('${ev.target.result}')`;
+                screen.style.backgroundSize = 'contain'; screen.style.backgroundPosition = 'center'; screen.style.backgroundRepeat = 'no-repeat'; screen.style.backgroundColor = '#000'; 
+                document.getElementById('menuClearBg').style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+        closeAllMenus();
+    }
+    function clearBackgroundImage() {
+        const screen = document.getElementById('screen');
+        screen.style.backgroundImage = 'none';
+        document.getElementById('menuClearBg').style.display = 'none';
+        changeBG('bg-white');
+        closeAllMenus();
+    }
+    function changeBG(c) {
+        const s = document.getElementById('screen');
+        s.style.backgroundColor = c === 'bg-black' ? '#000' : c === 'bg-white' ? '#fff' : 'transparent';
+        s.style.backgroundImage = c === 'bg-grid' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)' : 'none';
+        if(c === 'bg-grid') { s.style.backgroundSize = '20px 20px'; s.style.backgroundPosition = '0 0, 10px 10px'; }
+        document.getElementById('menuClearBg').style.display = 'none';
+        closeAllMenus();
+    }
+
+    // ★修正: カスタムフォントの登録IDをファイル名ベースにして復元可能にする
+    async function loadCustomFont() {
+        const input = document.createElement('input'); input.type = 'file'; input.accept = '.ttf,.otf';
+        input.onchange = async (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            try {
+                const displayName = file.name.split('.')[0];
+                // ファイル名から一意のIDを作成（プロジェクト復元時と同じになるように）
+                const fontId = `Custom_${displayName.replace(/[^a-zA-Z0-9]/g, "")}`;
+                const fontValue = `"${fontId}"`;
+                
+                // 初めて読み込むフォントの場合だけセレクトボックスに追加
+                const existingFont = customFonts.find(f => f.id === fontId);
+                if (!existingFont) {
+                    customFonts.push({ name: file.name, id: fontId, value: fontValue });
+                    document.querySelectorAll('.fontFamily').forEach(select => {
+                        const option = document.createElement('option');
+                        option.value = fontValue; option.text = `[+] ${displayName}`; option.style.fontFamily = fontValue;
+                        select.appendChild(option);
+                    });
+                }
+
+                // フォント実体をブラウザに読み込ませる
+                const buffer = await file.arrayBuffer();
+                const fontFace = new FontFace(fontId, buffer);
+                const loadedFont = await fontFace.load();
+                document.fonts.add(loadedFont);
+                
+                alert(`フォント「${displayName}」を読み込みました！`);
+                
+                // ロードした瞬間に、すべての字幕とプリセットの表示を更新して反映させる
+                document.querySelectorAll('.item').forEach(item => updatePreviewByElement(item));
+                renderPresets();
+                saveState();
+            } catch (err) { alert("フォント読み込み失敗: " + err); }
+        };
+        input.click();
+        closeAllMenus();
+    }
+
+    function syncVal(source, targetSelector) {
+        const parent = source.closest('.slider-group');
+        const target = parent.querySelector(targetSelector);
+        if(target) target.value = source.value;
+    }
+
+    function addItemAndSave() {
+        addItem();
+        saveState();
+        closeAllMenus();
+    }
+
+    function addItem(data = null, forceId = null) {
+        const id = forceId !== null ? forceId : itemCount++;
+        const div = document.createElement('div');
+        div.className = 'item'; div.dataset.id = id;
+        
+        let d = data;
+        
+        if (!d) {
+            if (defaultPresetId !== null) {
+                const dp = customPresets.find(p => p.id === defaultPresetId);
+                if (dp) {
+                    d = { 
+                        text: `Text`, font: dp.font, fWeight: dp.fWeight, 
+                        posX: dp.posX, posY: dp.posY, fSize: dp.fSize, 
+                        sWidth: dp.sWidth, fColor: dp.fColor, sColor: dp.sColor 
+                    };
+                }
+            }
+            if (!d) {
+                d = { text: `Text`, font: "'Noto Sans JP', sans-serif", fWeight: "bold", posX: 0, posY: -120, fSize: 50, sWidth: 10, fColor: "#ffffff", sColor: "#000000" };
+            }
+        }
+
+        // ★修正: 読み込み済みの（あるいはプロジェクトに保存されていた）カスタムフォントを一覧に含める
+        let fontOptions = `
+            <option value="'Noto Sans JP', sans-serif" style="font-family: 'Noto Sans JP', sans-serif;">Noto Sans JP</option>
+            <option value="'Dela Gothic One', sans-serif" style="font-family: 'Dela Gothic One', sans-serif;">Dela Gothic One</option>
+            <option value="'M PLUS Rounded 1c', sans-serif" style="font-family: 'M PLUS Rounded 1c', sans-serif;">M PLUS Rounded 1c</option>
+            <option value="'Yusei Magic', sans-serif" style="font-family: 'Yusei Magic', sans-serif;">Yusei Magic</option>
+            <option value="'RocknRoll One', sans-serif" style="font-family: 'RocknRoll One', sans-serif;">RocknRoll One</option>
+            <option value="'Reggae One', sans-serif" style="font-family: 'Reggae One', sans-serif;">Reggae One</option>
+            <option value="'Mochiy Pop P', sans-serif" style="font-family: 'Mochiy Pop P', sans-serif;">Mochiy Pop P</option>
+            <option value="'Kiwi Maru', sans-serif" style="font-family: 'Kiwi Maru', sans-serif;">Kiwi Maru</option>
+            <option value="'Stick', sans-serif" style="font-family: 'Stick', sans-serif;">Stick</option>
+            <option value="'Train One', sans-serif" style="font-family: 'Train One', sans-serif;">Train One</option>
+            <option value="'Rampart One', sans-serif" style="font-family: 'Rampart One', sans-serif;">Rampart One</option>
+            <option value="'DotGothic16', sans-serif" style="font-family: 'DotGothic16', sans-serif;">DotGothic16</option>
+            <option value="sans-serif" style="font-family: sans-serif;">OS標準 ゴシック</option>
+            <option value="serif" style="font-family: serif;">OS標準 明朝</option>
+        `;
+        customFonts.forEach(cf => { 
+            const displayName = cf.name.split('.')[0];
+            fontOptions += `<option value='${cf.value}' style='font-family: ${cf.value};'>[+] ${displayName}</option>`; 
+        });
+
+        div.innerHTML = `
+            <div class="item-header" onclick="setActive(${id})">
+                <span class="header-summary" id="summary-${id}">${d.text.split('\n')[0] || "(空)"}</span>
+                <div class="header-controls">
+                    <button class="btn-icon btn-mode" onclick="moveItem(this, -1); event.stopPropagation();">▲</button>
+                    <button class="btn-icon btn-mode" onclick="moveItem(this, 1); event.stopPropagation();">▼</button>
+                    <button class="btn-icon" style="background:var(--danger-bg);color:white" onclick="this.closest('.item').remove(); saveState(); event.stopPropagation();">×</button>
+                </div>
+            </div>
+            <div class="item-body">
+                <label>字幕テキスト (Enterで改行)</label>
+                <textarea class="txt" oninput="updateSummary(${id}); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">${d.text}</textarea>
+                
+                <div class="font-row">
+                    <div style="flex: 2;">
+                        <label>フォント</label>
+                        <select class="fontFamily" onchange="updatePreviewByElement(this.closest('.item')); saveState()">${fontOptions}</select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>文字の太さ</label>
+                        <select class="fontWeight" onchange="updatePreviewByElement(this.closest('.item')); saveState()">
+                            <option value="normal">標準</option><option value="bold">太字</option><option value="900">極太</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="controls-grid">
+                    <div class="control-unit"><label>X座標</label>
+                        <div class="slider-group">
+                            <input type="range" class="posX" min="-240" max="240" value="${d.posX}" oninput="syncVal(this, '.posX-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            <input type="number" class="posX-num num-input" value="${d.posX}" oninput="syncVal(this, '.posX'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                        </div>
+                    </div>
+                    <div class="control-unit"><label>Y座標</label>
+                        <div class="slider-group">
+                            <input type="range" class="posY" min="-180" max="180" value="${d.posY}" oninput="syncVal(this, '.posY-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            <input type="number" class="posY-num num-input" value="${d.posY}" oninput="syncVal(this, '.posY'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                        </div>
+                    </div>
+                    <div class="control-unit"><label>文字サイズ</label>
+                        <div class="slider-group">
+                            <input type="range" class="fSize" min="10" max="150" value="${d.fSize}" oninput="syncVal(this, '.fSize-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            <input type="number" class="fSize-num num-input" value="${d.fSize}" oninput="syncVal(this, '.fSize'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                        </div>
+                    </div>
+                    <div class="control-unit"><label>枠線サイズ</label>
+                        <div class="slider-group">
+                            <input type="range" class="sWidth" min="0" max="30" value="${d.sWidth}" oninput="syncVal(this, '.sWidth-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            <input type="number" class="sWidth-num num-input" value="${d.sWidth}" oninput="syncVal(this, '.sWidth'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                        </div>
+                    </div>
+                    <div class="control-unit"><label>文字色</label><input type="color" class="fColor" value="${d.fColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
+                    <div class="control-unit"><label>枠色</label><input type="color" class="sColor" value="${d.sColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
+                </div>
+            </div>
+        `;
+        document.getElementById('itemList').appendChild(div);
+        
+        // 追加後に値をセット（カスタムフォントが復元されていれば、ここで正しくセットされる）
+        div.querySelector('.fontFamily').value = d.font;
+        div.querySelector('.fontWeight').value = d.fWeight || "bold";
+        setActive(id);
+    }
+
+    function toggleTheme() { 
+        document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); 
+        closeAllMenus();
+    }
+    function setActive(id) {
+        lastActiveId = id;
+        document.querySelectorAll('.item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.id) === id));
+        updatePreviewByElement(document.querySelector(`.item[data-id="${id}"]`));
+    }
+    function updateSummary(id) { document.getElementById(`summary-${id}`).innerText = document.querySelector(`.item[data-id="${id}"] .txt`).value.split('\n')[0] || "(空)"; }
+    function moveItem(btn, dir) {
+        const item = btn.closest('.item');
+        if (dir === -1 && item.previousElementSibling) item.parentNode.insertBefore(item, item.previousElementSibling);
+        else if (dir === 1 && item.nextElementSibling) item.parentNode.insertBefore(item.nextElementSibling, item);
+        saveState(); 
+    }
+
+    function drawItemToCanvas(ctx, item) {
+        const text = item.querySelector('.txt').value;
+        const font = item.querySelector('.fontFamily').value;
+        const fWeight = item.querySelector('.fontWeight').value;
+        const fSize = parseInt(item.querySelector('.fSize').value);
+        const posX = parseInt(item.querySelector('.posX').value);
+        const posY = parseInt(item.querySelector('.posY').value);
+        
+        ctx.clearRect(0, 0, 480, 360);
+        ctx.font = `${fWeight} ${fSize}px ${font}`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+        ctx.strokeStyle = item.querySelector('.sColor').value; 
+        ctx.lineWidth = parseInt(item.querySelector('.sWidth').value);
+        ctx.fillStyle = item.querySelector('.fColor').value;
+
+        const lines = text.split('\n');
+        const lineHeight = fSize * 1.2;
+        const startY = (180 - posY) - ((lines.length - 1) * lineHeight) / 2;
+
+        lines.forEach((line, index) => {
+            const drawY = startY + (index * lineHeight);
+            if(ctx.lineWidth > 0) ctx.strokeText(line, 240 + posX, drawY);
+            ctx.fillText(line, 240 + posX, drawY);
+        });
+    }
+
+    function updatePreviewByElement(item) {
+        if(!item) return;
+        const ctx = document.getElementById('previewCanvas').getContext('2d');
+        drawItemToCanvas(ctx, item);
+    }
+
+    function exportActiveImage() {
+        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`);
+        if (!item) return alert("字幕が選択されていません！");
+        const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 360;
+        drawItemToCanvas(canvas.getContext('2d'), item);
+        const link = document.createElement('a'); link.download = `subtitle_active.png`; link.href = canvas.toDataURL('image/png'); link.click();
+        closeAllMenus();
+    }
+    function exportAllImages() {
+        const items = document.querySelectorAll('.item');
+        if (items.length === 0) return alert("出力する字幕がありません！");
+        if(!confirm(`全 ${items.length} 枚の画像を連続でダウンロードします。`)) return;
+        const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 360; const ctx = canvas.getContext('2d');
+        items.forEach((item, index) => {
+            setTimeout(() => {
+                drawItemToCanvas(ctx, item);
+                const link = document.createElement('a'); link.download = `subtitle_${String(index + 1).padStart(3, '0')}.png`; link.href = canvas.toDataURL('image/png'); link.click();
+            }, index * 200);
+        });
+        closeAllMenus();
+    }
+    async function exportImageZip() {
+        const items = document.querySelectorAll('.item');
+        if (items.length === 0) return alert("出力する字幕がありません！");
+        let zipName = prompt("ZIPファイルの名前を入力", "subtitles");
+        if (!zipName) return; if (!zipName.endsWith('.zip')) zipName += '.zip';
+        const zip = new JSZip(); const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 360; const ctx = canvas.getContext('2d');
+        for (let i = 0; i < items.length; i++) {
+            drawItemToCanvas(ctx, items[i]);
+            zip.file(`subtitle_${String(i + 1).padStart(3, '0')}.png`, canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ""), {base64: true});
+        }
+        try {
+            const content = await zip.generateAsync({type: "uint8array"});
+            const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([content], {type: "application/zip"})); link.download = zipName; link.click();
+        } catch(err) { alert("ZIPの作成に失敗しました: " + err); }
+        closeAllMenus();
+    }
+
+    // ★修正: 保存データに customFonts も含める
+    function saveProject() {
+        const projectData = {
+            customPresets: customPresets,
+            customFonts: customFonts, 
+            defaultPresetId: defaultPresetId,
+            items: Array.from(document.querySelectorAll('.item')).map(item => ({
+                text: item.querySelector('.txt').value,
+                font: item.querySelector('.fontFamily').value,
+                fWeight: item.querySelector('.fontWeight').value,
+                posX: item.querySelector('.posX').value,
+                posY: item.querySelector('.posY').value,
+                fSize: item.querySelector('.fSize').value,
+                sWidth: item.querySelector('.sWidth').value,
+                fColor: item.querySelector('.fColor').value,
+                sColor: item.querySelector('.sColor').value
+            }))
+        };
+        const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jimaku_project.json'; a.click();
+        closeAllMenus();
+    }
+
+    // ★修正: 読み込み時に customFonts を復元する
+    function loadProject() {
+        const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if(data.customPresets) customPresets = data.customPresets;
+                    if(data.customFonts) customFonts = data.customFonts; 
+                    if(data.defaultPresetId !== undefined) defaultPresetId = data.defaultPresetId;
+                    renderPresets();
+                    
+                    document.getElementById('itemList').innerHTML = '';
+                    itemCount = 0;
+                    historyStack = []; 
+                    historyIndex = -1;
+                    
+                    if (data.items && data.items.length > 0) {
+                        data.items.forEach(itemData => addItem(itemData));
+                    } else { addItem(); }
+                    saveState(); 
+                } catch (err) { alert("プロジェクトファイルの読み込みに失敗しました。"); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+        closeAllMenus();
+    }
+    
+    // 初回起動時のセットアップ
+    addItem();
+    saveState();
+    renderPresets();
+    changeBG('bg-white'); 
+</script>
+</body>
+</html>
