@@ -91,7 +91,8 @@
         body[data-layout="mobile"][data-tab="preset"] .editor-area { display: none; }
         body[data-layout="mobile"][data-tab="preset"] .preset-area { grid-column: 1; grid-row: 2; display: block; margin: 0 auto; width: 100%; max-width: 600px; } 
 
-        .scratch-screen { width: 100%; max-width: 400px; margin: 0 auto; aspect-ratio: 4 / 3; height: auto; border: 1px solid var(--panel-border); border-radius: 8px; background-color: #fff; position: relative; overflow: hidden; }
+        /* ★修正: max-widthを400pxから600pxに変更し、エディタ部分と幅を合わせました */
+        .scratch-screen { width: 100%; max-width: 600px; margin: 0 auto; aspect-ratio: 4 / 3; height: auto; border: 1px solid var(--panel-border); border-radius: 8px; background-color: #fff; position: relative; overflow: hidden; }
         #previewCanvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         .editor-area { width: 100%; max-width: 600px; margin: 0 auto; }
 
@@ -323,7 +324,6 @@
         }
     }
 
-    // ★修正: プリセットのメニューが見切れないように表示位置を調整
     function togglePresetMenu(id, event) {
         event.stopPropagation();
         const menu = document.getElementById(`preset-menu-${id}`);
@@ -331,18 +331,13 @@
         closeAllMenus();
         if (!isShowing) { 
             menu.classList.add('show'); 
-            
-            // クリックした位置から画面下部にはみ出るかを判定
             const rect = event.target.getBoundingClientRect();
             const menuRect = menu.getBoundingClientRect();
-            
             if (rect.bottom + menuRect.height > window.innerHeight) {
-                // はみ出る場合は上に開く
                 menu.style.top = 'auto';
                 menu.style.bottom = '100%';
                 menu.style.borderRadius = '6px 0 6px 6px';
             } else {
-                // はみ出ない場合は下に開く
                 menu.style.top = '100%';
                 menu.style.bottom = 'auto';
                 menu.style.borderRadius = '0 0 6px 6px';
@@ -531,7 +526,7 @@
             document.getElementById('itemList').innerHTML = '';
             itemCount = 0;
             customPresets = [];
-            customFonts = []; // フォント履歴もクリア
+            customFonts = []; 
             defaultPresetId = null;
             historyStack = []; 
             historyIndex = -1;
@@ -574,18 +569,15 @@
         closeAllMenus();
     }
 
-    // ★修正: カスタムフォントの登録IDをファイル名ベースにして復元可能にする
     async function loadCustomFont() {
         const input = document.createElement('input'); input.type = 'file'; input.accept = '.ttf,.otf';
         input.onchange = async (e) => {
             const file = e.target.files[0]; if (!file) return;
             try {
                 const displayName = file.name.split('.')[0];
-                // ファイル名から一意のIDを作成（プロジェクト復元時と同じになるように）
                 const fontId = `Custom_${displayName.replace(/[^a-zA-Z0-9]/g, "")}`;
                 const fontValue = `"${fontId}"`;
                 
-                // 初めて読み込むフォントの場合だけセレクトボックスに追加
                 const existingFont = customFonts.find(f => f.id === fontId);
                 if (!existingFont) {
                     customFonts.push({ name: file.name, id: fontId, value: fontValue });
@@ -596,7 +588,6 @@
                     });
                 }
 
-                // フォント実体をブラウザに読み込ませる
                 const buffer = await file.arrayBuffer();
                 const fontFace = new FontFace(fontId, buffer);
                 const loadedFont = await fontFace.load();
@@ -604,7 +595,6 @@
                 
                 alert(`フォント「${displayName}」を読み込みました！`);
                 
-                // ロードした瞬間に、すべての字幕とプリセットの表示を更新して反映させる
                 document.querySelectorAll('.item').forEach(item => updatePreviewByElement(item));
                 renderPresets();
                 saveState();
@@ -649,7 +639,6 @@
             }
         }
 
-        // ★修正: 読み込み済みの（あるいはプロジェクトに保存されていた）カスタムフォントを一覧に含める
         let fontOptions = `
             <option value="'Noto Sans JP', sans-serif" style="font-family: 'Noto Sans JP', sans-serif;">Noto Sans JP</option>
             <option value="'Dela Gothic One', sans-serif" style="font-family: 'Dela Gothic One', sans-serif;">Dela Gothic One</option>
@@ -729,7 +718,6 @@
         `;
         document.getElementById('itemList').appendChild(div);
         
-        // 追加後に値をセット（カスタムフォントが復元されていれば、ここで正しくセットされる）
         div.querySelector('.fontFamily').value = d.font;
         div.querySelector('.fontWeight').value = d.fWeight || "bold";
         setActive(id);
@@ -822,7 +810,6 @@
         closeAllMenus();
     }
 
-    // ★修正: 保存データに customFonts も含める
     function saveProject() {
         const projectData = {
             customPresets: customPresets,
@@ -845,7 +832,6 @@
         closeAllMenus();
     }
 
-    // ★修正: 読み込み時に customFonts を復元する
     function loadProject() {
         const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
         input.onchange = (e) => {
@@ -876,7 +862,6 @@
         closeAllMenus();
     }
     
-    // 初回起動時のセットアップ
     addItem();
     saveState();
     renderPresets();
