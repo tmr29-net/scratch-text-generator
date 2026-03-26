@@ -91,7 +91,6 @@
         body[data-layout="mobile"][data-tab="preset"] .editor-area { display: none; }
         body[data-layout="mobile"][data-tab="preset"] .preset-area { grid-column: 1; grid-row: 2; display: block; margin: 0 auto; width: 100%; max-width: 600px; } 
 
-        /* ★修正: max-widthを400pxから600pxに変更し、エディタ部分と幅を合わせました */
         .scratch-screen { width: 100%; max-width: 600px; margin: 0 auto; aspect-ratio: 4 / 3; height: auto; border: 1px solid var(--panel-border); border-radius: 8px; background-color: #fff; position: relative; overflow: hidden; }
         #previewCanvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         .editor-area { width: 100%; max-width: 600px; margin: 0 auto; }
@@ -112,28 +111,33 @@
         .item-body { display: none; padding: 12px; border-top: 1px solid var(--panel-border); }
         .item.active .item-body { display: block; }
         
-        .controls-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.85em; margin-top: 10px; }
+        /* ★修正：狭い画面でも要素がはみ出さないように minmax(0, 1fr) を適用 */
+        .controls-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; font-size: 0.85em; margin-top: 10px; }
         
-        .control-unit { display: flex; flex-direction: column; }
+        .control-unit { display: flex; flex-direction: column; min-width: 0; }
         label { font-size: 0.75em; color: var(--text-color); opacity: 0.8; font-weight: 600; display: block; margin-bottom: 4px; }
         
         textarea.txt, select, input[type="text"] { width: 100%; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.9em; height: 34px; box-sizing: border-box; }
         textarea.txt { padding: 6px 8px; height: 50px; resize: vertical; line-height: 1.4; }
-        select { padding: 0 4px; line-height: 32px; } 
+        select { padding: 0 4px; line-height: 32px; text-overflow: ellipsis; } 
         
         textarea.txt:focus, select:focus { outline: none; border-color: var(--accent-color); }
         input[type="color"] { width: 100%; height: 34px; padding: 1px; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; background: var(--input-bg); }
         
+        /* ★修正：スライダーが親要素を押し広げないように min-width: 0; を適用 */
         .slider-group { display: flex; gap: 8px; align-items: center; width: 100%; }
-        .slider-group input[type="range"] { flex: 1; margin: 0; accent-color: var(--accent-color); height: 16px; }
-        input[type="number"].num-input { width: 56px; padding: 4px; height: 34px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.85em; text-align: right; }
+        .slider-group input[type="range"] { flex: 1; margin: 0; accent-color: var(--accent-color); height: 16px; min-width: 0; }
+        input[type="number"].num-input { width: 56px; padding: 4px; height: 34px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.85em; text-align: right; flex-shrink: 0; }
         input[type="number"].num-input:focus { outline: none; border-color: var(--accent-color); }
 
         .btn-icon { width: 26px; height: 26px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 0.9em; line-height: 1; }
         .btn-mode { background: var(--panel-border); color: var(--text-color); }
         .add-btn { background: var(--success-bg); color: white; padding: 10px; width: 100%; margin-bottom: 12px; font-size: 0.9em; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .apply-btn { background: var(--accent-color); color: white; padding: 6px 14px; font-size: 0.85em; }
-        .font-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; }
+        
+        /* ★修正：フォント選択欄が親要素を押し広げないように指定 */
+        .font-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; width: 100%; }
+        .font-row > div { min-width: 0; }
 
         .preset-area::-webkit-scrollbar { width: 6px; }
         .preset-area::-webkit-scrollbar-track { background: transparent; }
