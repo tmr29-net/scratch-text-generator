@@ -2,8 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scratch Text Generator</title>
+    <title>Scratch Text Generator - PC & Local Audio Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,26 +10,23 @@
     
     <style>
         :root { 
-            --bg-color: #0f172a; 
-            --text-color: #f8fafc; 
-            --panel-bg: #1e293b; 
-            --panel-border: #334155; 
-            --input-bg: #0f172a; 
+            --bg-color: #121212; 
+            --text-color: #e0e0e0; 
+            --panel-bg: #1e1e1e; 
+            --panel-border: #333333; 
+            --input-bg: #2d2d2d; 
             --accent-color: #3b82f6; 
-            --danger-bg: #ef4444;
+            --danger-bg: #ef4444; 
             --success-bg: #10b981;
-            --menu-hover: #2563eb;
-            --tab-bg: #0f172a;
+            --menu-hover: #333333;
         }
         [data-theme="light"] { 
-            --bg-color: #f1f5f9; 
-            --text-color: #1e293b; 
+            --bg-color: #f3f4f6; 
+            --text-color: #1f2937; 
             --panel-bg: #ffffff; 
-            --panel-border: #cbd5e1; 
-            --input-bg: #f8fafc; 
-            --accent-color: #2563eb; 
-            --menu-hover: #bfdbfe;
-            --tab-bg: #e2e8f0;
+            --panel-border: #d1d5db; 
+            --input-bg: #f9fafb; 
+            --menu-hover: #e5e7eb;
         }
         
         *, *::before, *::after { box-sizing: border-box; }
@@ -45,98 +41,79 @@
         }
         
         button, input, select, textarea { font-family: inherit; }
-        button { cursor: pointer; border-radius: 6px; border: none; font-weight: bold; transition: 0.2s; }
+        button { cursor: pointer; border-radius: 4px; border: none; font-weight: bold; transition: 0.2s; }
         button:hover:not(:disabled) { filter: brightness(1.1); }
         
         /* メニューバー */
-        .menu-bar { background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); display: flex; align-items: center; padding: 0 12px; height: 32px; font-size: 0.85em; user-select: none; position: sticky; top: 0; z-index: 2000; }
+        .menu-bar { background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); display: flex; align-items: center; padding: 0 12px; height: 36px; font-size: 0.85em; user-select: none; position: sticky; top: 0; z-index: 2000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
         .menu-item { padding: 0 12px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; color: var(--text-color); }
-        .menu-item:hover, .menu-item.active { background: var(--menu-hover); color: [data-theme="light"] ? var(--text-color) : white; }
-        [data-theme="dark"] .menu-item:hover, [data-theme="dark"] .menu-item.active { color: white; }
-        [data-theme="light"] .menu-item:hover, [data-theme="light"] .menu-item.active { color: #1e293b; }
+        .menu-item:hover, .menu-item.active { background: var(--menu-hover); color: var(--text-color); }
 
-        .header-title { position: absolute; right: 16px; font-weight: normal; font-size: 1.1em; pointer-events: none; color: var(--text-color); letter-spacing: 0.05em; }
-        body[data-layout="mobile"] .header-title { display: none; }
+        .header-title { position: absolute; right: 16px; font-weight: bold; font-size: 1.1em; pointer-events: none; color: var(--text-color); letter-spacing: 0.05em; }
 
-        .dropdown { display: none; position: absolute; top: 32px; left: 0; background: var(--panel-bg); border: 1px solid var(--panel-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 220px; white-space: nowrap; padding: 6px 0; border-radius: 0 0 6px 6px; z-index: 2001; }
+        .dropdown { display: none; position: absolute; top: 36px; left: 0; background: var(--panel-bg); border: 1px solid var(--panel-border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 220px; white-space: nowrap; padding: 6px 0; border-radius: 0 0 4px 4px; z-index: 9999; }
         .dropdown.show { display: block; }
         .dropdown-item { padding: 8px 16px; cursor: pointer; color: var(--text-color); display: flex; justify-content: space-between; gap: 24px; align-items: center; }
         .dropdown-item:hover { background: var(--menu-hover); }
         .dropdown-item.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
-        
-        [data-theme="dark"] .dropdown-item:hover:not(.disabled) { color: white; }
-        [data-theme="light"] .dropdown-item:hover:not(.disabled) { color: #1e293b; }
         .dropdown-divider { height: 1px; background: var(--panel-border); margin: 6px 0; }
         .shortcut { opacity: 0.6; font-size: 0.9em; text-align: right;}
 
-        /* モバイル用タブバー */
-        .mobile-tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background: var(--panel-bg); border-top: 1px solid var(--panel-border); display: none; z-index: 2000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        .tab-btn { flex: 1; background: transparent; color: var(--text-color); border: none; font-size: 0.9em; border-radius: 0; opacity: 0.6; font-weight: bold; letter-spacing: 0.05em; }
-        .tab-btn.active { opacity: 1; background: var(--tab-bg); border-top: 3px solid var(--accent-color); }
+        /* 大枠のレイアウト (PC専用) */
+        .main-wrapper { display: grid; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; width: 100%; align-items: start; grid-template-columns: 320px 1fr; grid-template-rows: auto 1fr; }
+        .preset-area { grid-column: 1; grid-row: 1 / 3; position: sticky; top: 56px; max-height: calc(100vh - 76px); overflow-y: auto; padding-right: 8px;}
+        .preview-area { grid-column: 2; grid-row: 1; position: sticky; top: 56px; z-index: 1000; background: var(--bg-color); padding-bottom: 8px;}
+        .editor-area { grid-column: 2; grid-row: 2; justify-self: stretch; width: 100%; max-width: 800px; margin: 0 auto;} 
 
-        /* 大枠のレイアウト */
-        .main-wrapper { display: grid; gap: 20px; padding: 20px; max-width: 1100px; margin: 0 auto; width: 100%; align-items: start; }
-
-        body[data-layout="pc"] .main-wrapper { grid-template-columns: 320px 1fr; grid-template-rows: auto 1fr; }
-        body[data-layout="pc"] .preset-area { grid-column: 1; grid-row: 1 / 3; position: sticky; top: 52px; max-height: calc(100vh - 70px); overflow-y: auto; padding-right: 8px;}
-        body[data-layout="pc"] .preview-area { grid-column: 2; grid-row: 1; position: sticky; top: 52px; z-index: 1000; background: var(--bg-color); padding-bottom: 8px;}
-        body[data-layout="pc"] .editor-area { grid-column: 2; grid-row: 2; justify-self: center; } 
-        
-        body[data-layout="mobile"] .main-wrapper { grid-template-columns: 1fr; grid-template-rows: auto 1fr; padding: 12px; padding-bottom: 70px; gap: 12px; }
-        body[data-layout="mobile"] .preview-area { grid-column: 1; grid-row: 1; position: sticky; top: 32px; z-index: 1000; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: var(--bg-color); padding-bottom: 6px;}
-        body[data-layout="mobile"] .mobile-tab-bar { display: flex; }
-        
-        body[data-layout="mobile"][data-tab="editor"] .preset-area { display: none; }
-        body[data-layout="mobile"][data-tab="editor"] .editor-area { grid-column: 1; grid-row: 2; display: block; }
-        body[data-layout="mobile"][data-tab="preset"] .editor-area { display: none; }
-        body[data-layout="mobile"][data-tab="preset"] .preset-area { grid-column: 1; grid-row: 2; display: block; margin: 0 auto; width: 100%; max-width: 600px; } 
-
-        .scratch-screen { width: 100%; max-width: 600px; margin: 0 auto; aspect-ratio: 4 / 3; height: auto; border: 1px solid var(--panel-border); border-radius: 8px; background-color: #fff; position: relative; overflow: hidden; }
+        .scratch-screen { width: 100%; max-width: 640px; margin: 0 auto; aspect-ratio: 4 / 3; height: auto; border: 1px solid var(--panel-border); border-radius: 4px; background-color: #fff; position: relative; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
         #previewCanvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-        .editor-area { width: 100%; max-width: 600px; margin: 0 auto; }
 
         /* プリセットエリア */
-        .preset-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; margin-bottom: 10px; }
-        .preset-preview-box { border-radius: 7px 7px 0 0; height: 60px; display: flex; justify-content: center; align-items: center; background-image: linear-gradient(45deg, rgba(128,128,128,0.2) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.2) 75%, rgba(128,128,128,0.2)), linear-gradient(45deg, rgba(128,128,128,0.2) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.2) 75%, rgba(128,128,128,0.2)); background-size: 16px 16px; background-position: 0 0, 8px 8px; border-bottom: 1px solid var(--panel-border); overflow: hidden;}
+        .preset-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 6px; margin-bottom: 10px; }
+        .preset-preview-box { border-radius: 5px 5px 0 0; height: 60px; display: flex; justify-content: center; align-items: center; background-image: linear-gradient(45deg, rgba(128,128,128,0.2) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.2) 75%, rgba(128,128,128,0.2)), linear-gradient(45deg, rgba(128,128,128,0.2) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.2) 75%, rgba(128,128,128,0.2)); background-size: 16px 16px; background-position: 0 0, 8px 8px; border-bottom: 1px solid var(--panel-border); overflow: hidden;}
         .preset-sample-text { font-size: 24px; white-space: nowrap; line-height: 1; }
         .preset-info { padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; }
         .preset-name-disp { font-weight: bold; font-size: 0.85em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;}
         
         /* エディタアイテム */
-        .item { background: var(--panel-bg); margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--panel-border); transition: 0.2s; overflow: hidden; }
-        .item.active { border: 1px solid var(--accent-color); box-shadow: 0 0 0 1px var(--accent-color); }
-        .item-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; cursor: pointer; background: rgba(0,0,0,0.05); }
-        .header-summary { font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin-right: 12px; font-weight: 600; }
+        .item { background: var(--panel-bg); margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--panel-border); transition: 0.2s; overflow: hidden; }
+        .item.active { border: 1px solid var(--accent-color); border-left: 4px solid var(--accent-color); }
+        .item-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; cursor: pointer; background: rgba(0,0,0,0.1); }
+        .header-summary { font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin-right: 12px; font-weight: bold; color: var(--text-color); }
         .header-controls { display: flex; gap: 4px; }
-        .item-body { display: none; padding: 12px; border-top: 1px solid var(--panel-border); }
-        .item.active .item-body { display: block; }
         
-        /* ★修正：狭い画面でも要素がはみ出さないように minmax(0, 1fr) を適用 */
-        .controls-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; font-size: 0.85em; margin-top: 10px; }
-        
+        .item-body { display: none; padding: 16px; border-top: 1px solid var(--panel-border); }
+        .item.active .item-body { display: flex; gap: 24px; } 
+
+        .editor-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+        .col-title { font-size: 0.8em; font-weight: bold; margin-bottom: 4px; display: block; border-bottom: 1px solid var(--panel-border); padding-bottom: 4px; }
+
+        .controls-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 0.85em; }
         .control-unit { display: flex; flex-direction: column; min-width: 0; }
-        label { font-size: 0.75em; color: var(--text-color); opacity: 0.8; font-weight: 600; display: block; margin-bottom: 4px; }
+        label { font-size: 0.75em; color: var(--text-color); opacity: 0.9; display: block; margin-bottom: 4px; }
         
-        textarea.txt, select, input[type="text"] { width: 100%; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.9em; height: 34px; box-sizing: border-box; }
-        textarea.txt { padding: 6px 8px; height: 50px; resize: vertical; line-height: 1.4; }
-        select { padding: 0 4px; line-height: 32px; text-overflow: ellipsis; } 
+        textarea.txt, textarea.vText, select, input[type="text"] { width: 100%; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.9em; box-sizing: border-box; }
+        textarea.txt, textarea.vText { padding: 8px; height: 60px; resize: vertical; line-height: 1.4; }
+        select { padding: 4px 8px; height: 34px; text-overflow: ellipsis; } 
         
-        textarea.txt:focus, select:focus { outline: none; border-color: var(--accent-color); }
-        input[type="color"] { width: 100%; height: 34px; padding: 1px; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; background: var(--input-bg); }
+        textarea:focus, select:focus, input[type="text"]:focus { outline: none; border-color: var(--accent-color); }
+        input[type="color"] { width: 100%; height: 30px; padding: 0; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; background: var(--input-bg); }
         
-        /* ★修正：スライダーが親要素を押し広げないように min-width: 0; を適用 */
         .slider-group { display: flex; gap: 8px; align-items: center; width: 100%; }
-        .slider-group input[type="range"] { flex: 1; margin: 0; accent-color: var(--accent-color); height: 16px; min-width: 0; }
-        input[type="number"].num-input { width: 56px; padding: 4px; height: 34px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--panel-border); border-radius: 4px; font-size: 0.85em; text-align: right; flex-shrink: 0; }
+        .slider-group input[type="range"] { flex: 1; margin: 0; accent-color: var(--accent-color); height: 6px; min-width: 0; }
+
+        input[type="number"].num-input { width: 50px; padding: 4px; height: 28px; background: transparent; color: var(--text-color); border: none; font-size: 0.85em; text-align: right; flex-shrink: 0; border-bottom: 1px solid var(--panel-border); border-radius: 0;}
         input[type="number"].num-input:focus { outline: none; border-color: var(--accent-color); }
 
-        .btn-icon { width: 26px; height: 26px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 0.9em; line-height: 1; }
-        .btn-mode { background: var(--panel-border); color: var(--text-color); }
-        .add-btn { background: var(--success-bg); color: white; padding: 10px; width: 100%; margin-bottom: 12px; font-size: 0.9em; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .apply-btn { background: var(--accent-color); color: white; padding: 6px 14px; font-size: 0.85em; }
+        .btn-icon { width: 28px; height: 28px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 0.9em; line-height: 1; background: var(--panel-border); color: var(--text-color); }
+        .btn-icon.delete { background: var(--danger-bg); color: white; }
         
-        /* ★修正：フォント選択欄が親要素を押し広げないように指定 */
-        .font-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; width: 100%; }
+        .add-btn { background: var(--panel-bg); color: var(--text-color); border: 1px dashed var(--panel-border); padding: 12px; width: 100%; margin-bottom: 12px; font-size: 0.9em; border-radius: 6px; }
+        .add-btn:hover { background: rgba(255,255,255,0.05); border-color: var(--accent-color); }
+        .apply-btn { background: var(--panel-border); color: var(--text-color); padding: 6px 10px; font-size: 0.85em; }
+        .play-btn { background: var(--accent-color); color: white; padding: 10px; font-size: 0.9em; width: 100%; margin-top: auto; display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: bold;}
+        
+        .font-row { display: flex; gap: 8px; align-items: flex-end; width: 100%; }
         .font-row > div { min-width: 0; }
 
         .preset-area::-webkit-scrollbar { width: 6px; }
@@ -144,10 +121,10 @@
         .preset-area::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
     </style>
 </head>
-<body data-theme="dark" data-layout="pc" data-tab="editor">
+<body data-theme="dark">
 
 <div class="menu-bar">
-    <div class="header-title">Scratch Text Generator</div>
+    <div class="header-title">Scratch Text Generator (PC/VOICEVOX/Softalk)</div>
     <div class="menu-item" onclick="toggleMenu('menu-file', event)">ファイル
         <div class="dropdown" id="menu-file">
             <div class="dropdown-item" onclick="newProject()"><span>新規作成</span></div>
@@ -174,9 +151,6 @@
     </div>
     <div class="menu-item" onclick="toggleMenu('menu-view', event)">表示
         <div class="dropdown" id="menu-view">
-            <div class="dropdown-item" onclick="setLayout('pc')" style="color:var(--accent-color); font-weight:bold;"><span>PCモードに変更</span></div>
-            <div class="dropdown-item" onclick="setLayout('mobile')" style="color:var(--success-bg); font-weight:bold;"><span>モバイルモードに変更</span></div>
-            <div class="dropdown-divider"></div>
             <div class="dropdown-item" onclick="toggleTheme()"><span>テーマ切替 (ダーク/ライト)</span></div>
             <div class="dropdown-divider"></div>
             <div class="dropdown-item" onclick="changeBG('bg-black')"><span>プレビュー背景: 黒</span></div>
@@ -190,13 +164,13 @@
 
 <div class="main-wrapper">
     <div class="preset-area">
-        <button class="add-btn" onclick="saveCurrentStyleAsPreset()" style="background:var(--accent-color);">＋ 今のスタイルを保存</button>
+        <button class="add-btn" onclick="saveCurrentStyleAsPreset()" style="background:var(--panel-border); color:var(--text-color); border:none;">＋ 今のスタイルを保存</button>
         <div id="presetList"></div>
     </div>
 
-    <div class="preview-area">
+    <div class="preview-area" id="previewAreaWrapper">
         <div id="screen" class="scratch-screen">
-            <canvas id="previewCanvas" width="480" height="360"></canvas>
+            <canvas id="previewCanvas" width="960" height="720"></canvas>
         </div>
     </div>
 
@@ -204,11 +178,6 @@
         <div id="itemList"></div>
         <button class="add-btn" onclick="addItemAndSave()">＋ 新しい字幕を追加</button>
     </div>
-</div>
-
-<div class="mobile-tab-bar">
-    <button class="tab-btn active" id="tabBtnEditor" onclick="setMobileTab('editor')">字幕編集</button>
-    <button class="tab-btn" id="tabBtnPreset" onclick="setMobileTab('preset')">プリセット</button>
 </div>
 
 <script>
@@ -221,6 +190,65 @@
     let historyStack = [];
     let historyIndex = -1;
     let isUndoing = false;
+
+    // --- ローカル音声API関連の初期化 ---
+    let voicevoxVoices = [];
+    
+    async function initVoices() {
+        // VOICEVOXから話者一覧を取得
+        try {
+            const res = await fetch('http://127.0.0.1:50021/speakers');
+            if (res.ok) {
+                voicevoxVoices = await res.json();
+            }
+        } catch (e) {
+            console.warn("VOICEVOXに接続できませんでした。起動していない可能性があります。");
+        }
+
+        document.querySelectorAll('.vVoice').forEach(select => {
+            const currentVal = select.dataset.currentVoice || select.value;
+            select.innerHTML = '<option value="">(音声を選択)</option>';
+            
+            // Softalk (棒読みちゃんHTTP連携)
+            const stGroup = document.createElement('optgroup');
+            stGroup.label = "Softalk / 棒読みちゃん (要HTTP連携)";
+            stGroup.innerHTML = `
+                <option value="softalk_1">女性1</option>
+                <option value="softalk_2">女性2</option>
+                <option value="softalk_3">男性1</option>
+                <option value="softalk_4">男性2</option>
+                <option value="softalk_5">中性</option>
+                <option value="softalk_6">ロボット</option>
+                <option value="softalk_7">機械1</option>
+                <option value="softalk_8">機械2</option>
+            `;
+            select.appendChild(stGroup);
+
+            // VOICEVOX
+            if (voicevoxVoices.length > 0) {
+                const vvGroup = document.createElement('optgroup');
+                vvGroup.label = "VOICEVOX (ローカル)";
+                voicevoxVoices.forEach(speaker => {
+                    speaker.styles.forEach(style => {
+                        const opt = document.createElement('option');
+                        opt.value = `voicevox_${style.id}`;
+                        opt.textContent = `${speaker.name} (${style.name})`;
+                        vvGroup.appendChild(opt);
+                    });
+                });
+                select.appendChild(vvGroup);
+            }
+
+            if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+                select.value = currentVal;
+            } else if (!currentVal || currentVal === "") {
+                select.value = "softalk_1"; // デフォルト
+            }
+        });
+    }
+    
+    // ページ読み込み時に1回だけ音声リストを初期化
+    setTimeout(initVoices, 500);
 
     // --- Undo / Redo ---
     function getCurrentState() {
@@ -237,7 +265,13 @@
                 fSize: item.querySelector('.fSize').value,
                 sWidth: item.querySelector('.sWidth').value,
                 fColor: item.querySelector('.fColor').value,
-                sColor: item.querySelector('.sColor').value
+                sColor: item.querySelector('.sColor').value,
+                vText: item.querySelector('.vText').value,
+                vVoice: item.querySelector('.vVoice').value,
+                vPitch: item.querySelector('.vPitch').value,
+                vRate: item.querySelector('.vRate').value,
+                vVolume: item.querySelector('.vVolume').value,
+                isActive: item.classList.contains('active')
             }))
         };
     }
@@ -262,39 +296,25 @@
         isUndoing = true;
         itemCount = state.itemCount;
         document.getElementById('itemList').innerHTML = '';
-        state.items.forEach(itemData => addItem(itemData, itemData.id));
-        setActive(state.lastActiveId);
+        state.items.forEach(itemData => {
+            addItem(itemData, itemData.id);
+            const el = document.querySelector(`.item[data-id="${itemData.id}"]`);
+            if (itemData.isActive) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+        lastActiveId = state.lastActiveId;
+        updatePreviewByElement(document.querySelector(`.item[data-id="${lastActiveId}"]`));
         isUndoing = false;
     }
 
     function undo() {
-        if (historyIndex > 0) {
-            historyIndex--;
-            restoreState(historyStack[historyIndex]);
-            closeAllMenus();
-        }
+        if (historyIndex > 0) { historyIndex--; restoreState(historyStack[historyIndex]); closeAllMenus(); }
     }
-
     function redo() {
-        if (historyIndex < historyStack.length - 1) {
-            historyIndex++;
-            restoreState(historyStack[historyIndex]);
-            closeAllMenus();
-        }
+        if (historyIndex < historyStack.length - 1) { historyIndex++; restoreState(historyStack[historyIndex]); closeAllMenus(); }
     }
 
     // --- UI Control ---
-    function setLayout(mode) {
-        document.body.setAttribute('data-layout', mode);
-        closeAllMenus();
-    }
-
-    function setMobileTab(tab) {
-        document.body.setAttribute('data-tab', tab);
-        document.getElementById('tabBtnEditor').classList.toggle('active', tab === 'editor');
-        document.getElementById('tabBtnPreset').classList.toggle('active', tab === 'preset');
-    }
-
     function toggleMenu(menuId, event) {
         event.stopPropagation();
         const menu = document.getElementById(menuId);
@@ -302,30 +322,17 @@
         const isShowing = menu.classList.contains('show');
         closeAllMenus();
         if (!isShowing) { 
-            menu.classList.add('show'); 
-            parent.classList.add('active'); 
-            if (menuId === 'menu-edit') {
-                updateEditMenu();
-            }
+            menu.classList.add('show'); parent.classList.add('active'); 
+            if (menuId === 'menu-edit') updateEditMenu();
         }
     }
 
     function updateEditMenu() {
-        const undoBtn = document.getElementById('menu-undo');
-        const redoBtn = document.getElementById('menu-redo');
-        if (undoBtn) {
-            if (historyIndex > 0) undoBtn.classList.remove('disabled');
-            else undoBtn.classList.add('disabled');
-        }
-        if (redoBtn) {
-            if (historyIndex < historyStack.length - 1) redoBtn.classList.remove('disabled');
-            else redoBtn.classList.add('disabled');
-        }
+        const undoBtn = document.getElementById('menu-undo'); const redoBtn = document.getElementById('menu-redo');
+        if (undoBtn) undoBtn.classList.toggle('disabled', historyIndex <= 0);
+        if (redoBtn) redoBtn.classList.toggle('disabled', historyIndex >= historyStack.length - 1);
         const resetDefaultBtn = document.getElementById('menu-reset-default');
-        if (resetDefaultBtn) {
-            if (defaultPresetId === null) resetDefaultBtn.classList.add('disabled');
-            else resetDefaultBtn.classList.remove('disabled');
-        }
+        if (resetDefaultBtn) resetDefaultBtn.classList.toggle('disabled', defaultPresetId === null);
     }
 
     function togglePresetMenu(id, event) {
@@ -334,27 +341,25 @@
         const isShowing = menu.classList.contains('show');
         closeAllMenus();
         if (!isShowing) { 
-            menu.classList.add('show'); 
-            const rect = event.target.getBoundingClientRect();
-            const menuRect = menu.getBoundingClientRect();
-            if (rect.bottom + menuRect.height > window.innerHeight) {
-                menu.style.top = 'auto';
-                menu.style.bottom = '100%';
-                menu.style.borderRadius = '6px 0 6px 6px';
-            } else {
-                menu.style.top = '100%';
-                menu.style.bottom = 'auto';
-                menu.style.borderRadius = '0 0 6px 6px';
-            }
+            menu.classList.add('show'); menu.style.position = 'fixed'; 
+            const btnRect = event.target.getBoundingClientRect(); const menuRect = menu.getBoundingClientRect();
+            let topPos = btnRect.bottom; let leftPos = btnRect.right - menuRect.width;
+            if (topPos + menuRect.height > window.innerHeight) { topPos = btnRect.top - menuRect.height; menu.style.borderRadius = '4px 0 4px 4px'; } 
+            else { menu.style.borderRadius = '0 0 4px 4px'; }
+            menu.style.top = topPos + 'px'; menu.style.left = leftPos + 'px';
         }
     }
 
     function closeAllMenus() {
-        document.querySelectorAll('.dropdown').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.dropdown').forEach(m => {
+            m.classList.remove('show');
+            if (m.id.startsWith('preset-menu-')) { m.style.position = ''; m.style.top = ''; m.style.left = ''; }
+        });
         document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
     }
+    
     document.addEventListener('click', closeAllMenus);
-
+    window.addEventListener('scroll', function(e) { if (document.querySelector('.dropdown.show')) closeAllMenus(); }, true);
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey)) {
             if (e.key === 's') { e.preventDefault(); saveProject(); } 
@@ -364,8 +369,85 @@
     });
 
     function showAboutDialog() {
-        alert("Scratch Text Generator\nVersion 1.0\n制作：とぅもろー / Geminiで制作");
+        alert("Scratch Text Generator (PC/Local Audio Edition)\nVersion 1.4\n制作：とぅもろー / Geminiで制作");
         closeAllMenus();
+    }
+    
+    // --- 音声再生 (VOICEVOX / Softalk API) ---
+    async function playVoice(item) {
+        const vText = item.querySelector('.vText').value;
+        const subText = item.querySelector('.txt').value;
+        const textToSpeak = vText.trim() !== "" ? vText : subText;
+
+        if (!textToSpeak) return alert("読み上げるテキストがありません。");
+
+        const voiceVal = item.querySelector('.vVoice').value;
+        const pitch = parseFloat(item.querySelector('.vPitch').value);
+        const rate = parseFloat(item.querySelector('.vRate').value);
+        const volume = parseFloat(item.querySelector('.vVolume').value);
+
+        if (!voiceVal) return alert("音声エンジンを選択してください。");
+
+        // プレビュー再生ボタンを無効化して状態表示
+        const btn = item.querySelector('.play-btn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ 処理中...';
+        btn.disabled = true;
+
+        try {
+            if (voiceVal.startsWith('voicevox_')) {
+                // --- VOICEVOX API ---
+                const speakerId = voiceVal.split('_')[1];
+                
+                // 1. Audio Query 作成
+                const queryRes = await fetch(`http://127.0.0.1:50021/audio_query?text=${encodeURIComponent(textToSpeak)}&speaker=${speakerId}`, {
+                    method: 'POST'
+                });
+                if (!queryRes.ok) throw new Error('VOICEVOXからクエリを取得できませんでした。');
+                const query = await queryRes.json();
+                
+                // 2. パラメータの適用
+                query.speedScale = rate;
+                query.volumeScale = volume;
+                // UI(0~2) -> VOICEVOX pitch (-0.15~0.15 程度にスケーリング)
+                query.pitchScale = (pitch - 1.0) * 0.15; 
+
+                // 3. 音声合成 (WAV生成)
+                const synthRes = await fetch(`http://127.0.0.1:50021/synthesis?speaker=${speakerId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(query)
+                });
+                if (!synthRes.ok) throw new Error('VOICEVOXの音声合成に失敗しました。');
+                
+                const blob = await synthRes.blob();
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audio.play();
+
+            } else if (voiceVal.startsWith('softalk_')) {
+                // --- Softalk / 棒読みちゃん (HTTP連携 API) ---
+                const voiceId = voiceVal.split('_')[1];
+                
+                // 棒読みちゃんのパラメータスケール (標準100)
+                const bSpeed = Math.round(rate * 100);
+                const bTone = Math.round(pitch * 100);
+                const bVolume = Math.round(volume * 100);
+
+                const url = `http://127.0.0.1:50080/talk?text=${encodeURIComponent(textToSpeak)}&speed=${bSpeed}&tone=${bTone}&volume=${bVolume}&voice=${voiceId}`;
+                
+                // GETリクエストを投げるだけ（再生は棒読みちゃん本体で行われる）
+                fetch(url, { mode: 'no-cors' }).catch(e => {
+                    console.error(e);
+                    alert("棒読みちゃんとの通信に失敗しました。起動しているか、設定で「HTTP連携」が有効になっているか確認してください。");
+                });
+            }
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 
     // --- Preset Control ---
@@ -377,51 +459,33 @@
         if (!name) return; 
 
         const newPreset = {
-            id: Date.now(),
-            name: name,
-            posX: item.querySelector('.posX').value, 
-            posY: item.querySelector('.posY').value, 
-            fSize: item.querySelector('.fSize').value, 
-            sWidth: item.querySelector('.sWidth').value, 
-            fColor: item.querySelector('.fColor').value, 
-            sColor: item.querySelector('.sColor').value, 
-            font: item.querySelector('.fontFamily').value, 
-            fWeight: item.querySelector('.fontWeight').value
+            id: Date.now(), name: name,
+            posX: item.querySelector('.posX').value, posY: item.querySelector('.posY').value, 
+            fSize: item.querySelector('.fSize').value, sWidth: item.querySelector('.sWidth').value, 
+            fColor: item.querySelector('.fColor').value, sColor: item.querySelector('.sColor').value, 
+            font: item.querySelector('.fontFamily').value, fWeight: item.querySelector('.fontWeight').value,
+            vVoice: item.querySelector('.vVoice').value, vPitch: item.querySelector('.vPitch').value,
+            vRate: item.querySelector('.vRate').value, vVolume: item.querySelector('.vVolume').value
         };
 
-        customPresets.push(newPreset);
-        renderPresets();
-        
-        if(document.body.getAttribute('data-layout') === 'mobile') {
-            alert(`「${name}」を保存しました！`);
-        }
+        customPresets.push(newPreset); renderPresets();
     }
 
     function renderPresets() {
-        const list = document.getElementById('presetList');
-        list.innerHTML = '';
-        
+        const list = document.getElementById('presetList'); list.innerHTML = '';
         if(customPresets.length === 0) {
-            list.innerHTML = '<div style="text-align:center; opacity:0.5; font-size:0.85em; padding:20px;">プリセットはまだありません。</div>';
-            return;
+            list.innerHTML = '<div style="text-align:center; opacity:0.5; font-size:0.85em; padding:20px;">プリセットはまだありません。</div>'; return;
         }
 
         customPresets.forEach(p => {
-            const div = document.createElement('div');
-            div.className = 'preset-card';
+            const div = document.createElement('div'); div.className = 'preset-card';
             const strokePx = Math.max(0, Math.min(parseInt(p.sWidth) * 0.4, 8)); 
             const isDefault = (p.id === defaultPresetId);
             const safeFont = p.font ? p.font.replace(/"/g, '&quot;') : 'sans-serif';
             
             div.innerHTML = `
                 <div class="preset-preview-box">
-                    <span class="preset-sample-text" style="
-                        font-family: ${safeFont}; 
-                        font-weight: ${p.fWeight}; 
-                        color: ${p.fColor}; 
-                        -webkit-text-stroke: ${strokePx}px ${p.sColor};
-                        paint-order: stroke fill;
-                    ">あA漢</span>
+                    <span class="preset-sample-text" style="font-family: ${safeFont}; font-weight: ${p.fWeight}; color: ${p.fColor}; -webkit-text-stroke: ${strokePx}px ${p.sColor}; paint-order: stroke fill;">あA漢</span>
                 </div>
                 <div class="preset-info">
                     <div class="preset-name-disp" title="${p.name}">
@@ -431,8 +495,10 @@
                     <div style="display:flex; gap:6px; align-items:center;">
                         <button class="apply-btn" onclick="applyPreset(${p.id})">適用</button>
                         <div style="position:relative;">
-                            <button class="btn-icon" style="background:transparent; color:var(--text-color); font-size:1.2em; border:1px solid var(--panel-border);" onclick="togglePresetMenu(${p.id}, event)">︙</button>
-                            <div class="dropdown" id="preset-menu-${p.id}" style="right:0; left:auto;">
+                            <button class="btn-icon" style="background:transparent; border:1px solid var(--panel-border);" onclick="togglePresetMenu(${p.id}, event)">︙</button>
+                            <div class="dropdown" id="preset-menu-${p.id}">
+                                <div class="dropdown-item" onclick="createFromPreset(${p.id})"><span>この設定で新規作成</span></div>
+                                <div class="dropdown-divider"></div>
                                 <div class="dropdown-item" onclick="toggleDefaultPreset(${p.id})"><span>${isDefault ? 'デフォルトを解除' : 'デフォルトに設定'}</span></div>
                                 <div class="dropdown-item" onclick="renamePreset(${p.id})"><span>名称変更</span></div>
                                 <div class="dropdown-item" onclick="updatePreset(${p.id})"><span>更新 (今のスタイルで上書き)</span></div>
@@ -448,78 +514,59 @@
     }
 
     function applyPreset(id) {
-        const p = customPresets.find(preset => preset.id === id);
-        if (!p) return;
-        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`); 
-        if(!item) return alert("適用する字幕を選択してください。");
+        const p = customPresets.find(preset => preset.id === id); if (!p) return;
+        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`); if(!item) return alert("適用する字幕を選択してください。");
         
         item.querySelector('.posX').value = p.posX; item.querySelector('.posX-num').value = p.posX;
         item.querySelector('.posY').value = p.posY; item.querySelector('.posY-num').value = p.posY;
         item.querySelector('.fSize').value = p.fSize; item.querySelector('.fSize-num').value = p.fSize;
         item.querySelector('.sWidth').value = p.sWidth; item.querySelector('.sWidth-num').value = p.sWidth;
         item.querySelector('.fColor').value = p.fColor; item.querySelector('.sColor').value = p.sColor; 
-        item.querySelector('.fontFamily').value = p.font;
-        item.querySelector('.fontWeight').value = p.fWeight;
+        item.querySelector('.fontFamily').value = p.font; item.querySelector('.fontWeight').value = p.fWeight;
+
+        if (p.vVoice !== undefined) { item.querySelector('.vVoice').dataset.currentVoice = p.vVoice; initVoices(); }
+        if (p.vPitch !== undefined) { item.querySelector('.vPitch').value = p.vPitch; item.querySelector('.vPitch-num').value = p.vPitch; }
+        if (p.vRate !== undefined) { item.querySelector('.vRate').value = p.vRate; item.querySelector('.vRate-num').value = p.vRate; }
+        if (p.vVolume !== undefined) { item.querySelector('.vVolume').value = p.vVolume; item.querySelector('.vVolume-num').value = p.vVolume; }
         
-        updatePreviewByElement(item);
-        saveState();
-        
-        if(document.body.getAttribute('data-layout') === 'mobile') {
-            setMobileTab('editor');
-        }
+        updatePreviewByElement(item); saveState();
     }
 
-    function toggleDefaultPreset(id) {
-        if (defaultPresetId === id) defaultPresetId = null; 
-        else defaultPresetId = id; 
-        renderPresets();
-        closeAllMenus();
+    function createFromPreset(id) {
+        const p = customPresets.find(preset => preset.id === id); if (!p) return;
+        const newData = {
+            text: `Text`, font: p.font, fWeight: p.fWeight, 
+            posX: p.posX, posY: p.posY, fSize: p.fSize, sWidth: p.sWidth, fColor: p.fColor, sColor: p.sColor,
+            vVoice: p.vVoice, vPitch: p.vPitch, vRate: p.vRate, vVolume: p.vVolume
+        };
+        addItem(newData); saveState(); closeAllMenus();
     }
 
-    function resetDefaultPreset() {
-        if (defaultPresetId === null) return;
-        defaultPresetId = null;
-        renderPresets();
-        alert("デフォルト設定を初期化しました。\n以降、追加される字幕は標準のスタイルになります。");
-        closeAllMenus();
-    }
-
+    function toggleDefaultPreset(id) { defaultPresetId = defaultPresetId === id ? null : id; renderPresets(); closeAllMenus(); }
+    function resetDefaultPreset() { if (defaultPresetId === null) return; defaultPresetId = null; renderPresets(); alert("デフォルト設定を初期化しました。\n以降、追加される字幕は標準のスタイルになります。"); closeAllMenus(); }
     function renamePreset(id) {
-        const p = customPresets.find(preset => preset.id === id);
-        if (!p) return;
+        const p = customPresets.find(preset => preset.id === id); if (!p) return;
         const newName = prompt("新しい名前を入力してください:", p.name);
-        if (newName && newName.trim() !== "") {
-            p.name = newName.trim();
-            renderPresets();
-        }
+        if (newName && newName.trim() !== "") { p.name = newName.trim(); renderPresets(); }
         closeAllMenus();
     }
-
     function updatePreset(id) {
-        const p = customPresets.find(preset => preset.id === id);
-        if (!p) return;
-        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`); 
-        if(!item) return alert("現在のスタイルを取得する字幕を選択してください。");
-
+        const p = customPresets.find(preset => preset.id === id); if (!p) return;
+        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`); if(!item) return alert("現在のスタイルを取得する字幕を選択してください。");
         if(confirm(`プリセット「${p.name}」を、現在選択中のスタイルで上書きしますか？`)) {
-            p.posX = item.querySelector('.posX').value;
-            p.posY = item.querySelector('.posY').value;
-            p.fSize = item.querySelector('.fSize').value;
-            p.sWidth = item.querySelector('.sWidth').value;
-            p.fColor = item.querySelector('.fColor').value;
-            p.sColor = item.querySelector('.sColor').value;
-            p.font = item.querySelector('.fontFamily').value;
-            p.fWeight = item.querySelector('.fontWeight').value;
+            p.posX = item.querySelector('.posX').value; p.posY = item.querySelector('.posY').value;
+            p.fSize = item.querySelector('.fSize').value; p.sWidth = item.querySelector('.sWidth').value;
+            p.fColor = item.querySelector('.fColor').value; p.sColor = item.querySelector('.sColor').value;
+            p.font = item.querySelector('.fontFamily').value; p.fWeight = item.querySelector('.fontWeight').value;
+            p.vVoice = item.querySelector('.vVoice').value;
+            p.vPitch = item.querySelector('.vPitch').value; p.vRate = item.querySelector('.vRate').value; p.vVolume = item.querySelector('.vVolume').value;
             renderPresets();
         }
         closeAllMenus();
     }
-
     function deletePreset(id) {
         if(confirm("このプリセットを削除しますか？")) {
-            if (defaultPresetId === id) defaultPresetId = null;
-            customPresets = customPresets.filter(p => p.id !== id);
-            renderPresets();
+            if (defaultPresetId === id) defaultPresetId = null; customPresets = customPresets.filter(p => p.id !== id); renderPresets();
         }
         closeAllMenus();
     }
@@ -527,50 +574,34 @@
     // --- App Actions ---
     function newProject() {
         if(confirm("現在の作業内容を破棄して新しく作り直しますか？")) {
-            document.getElementById('itemList').innerHTML = '';
-            itemCount = 0;
-            customPresets = [];
-            customFonts = []; 
-            defaultPresetId = null;
-            historyStack = []; 
-            historyIndex = -1;
-            renderPresets();
-            addItemAndSave();
-            changeBG('bg-white'); 
+            document.getElementById('itemList').innerHTML = ''; itemCount = 0; customPresets = []; customFonts = []; defaultPresetId = null; historyStack = []; historyIndex = -1;
+            renderPresets(); addItemAndSave(); changeBG('bg-white'); 
         }
         closeAllMenus();
     }
-
     function loadBackgroundImage() {
         const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
         input.onchange = (e) => {
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const screen = document.getElementById('screen');
-                screen.style.backgroundImage = `url('${ev.target.result}')`;
+                const screen = document.getElementById('screen'); screen.style.backgroundImage = `url('${ev.target.result}')`;
                 screen.style.backgroundSize = 'contain'; screen.style.backgroundPosition = 'center'; screen.style.backgroundRepeat = 'no-repeat'; screen.style.backgroundColor = '#000'; 
                 document.getElementById('menuClearBg').style.display = 'flex';
             };
             reader.readAsDataURL(file);
         };
-        input.click();
-        closeAllMenus();
+        input.click(); closeAllMenus();
     }
     function clearBackgroundImage() {
-        const screen = document.getElementById('screen');
-        screen.style.backgroundImage = 'none';
-        document.getElementById('menuClearBg').style.display = 'none';
-        changeBG('bg-white');
-        closeAllMenus();
+        const screen = document.getElementById('screen'); screen.style.backgroundImage = 'none'; document.getElementById('menuClearBg').style.display = 'none'; changeBG('bg-white'); closeAllMenus();
     }
     function changeBG(c) {
         const s = document.getElementById('screen');
         s.style.backgroundColor = c === 'bg-black' ? '#000' : c === 'bg-white' ? '#fff' : 'transparent';
         s.style.backgroundImage = c === 'bg-grid' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)' : 'none';
         if(c === 'bg-grid') { s.style.backgroundSize = '20px 20px'; s.style.backgroundPosition = '0 0, 10px 10px'; }
-        document.getElementById('menuClearBg').style.display = 'none';
-        closeAllMenus();
+        document.getElementById('menuClearBg').style.display = 'none'; closeAllMenus();
     }
 
     async function loadCustomFont() {
@@ -578,47 +609,28 @@
         input.onchange = async (e) => {
             const file = e.target.files[0]; if (!file) return;
             try {
-                const displayName = file.name.split('.')[0];
-                const fontId = `Custom_${displayName.replace(/[^a-zA-Z0-9]/g, "")}`;
-                const fontValue = `"${fontId}"`;
-                
+                const displayName = file.name.split('.')[0]; const fontId = `Custom_${displayName.replace(/[^a-zA-Z0-9]/g, "")}`; const fontValue = `"${fontId}"`;
                 const existingFont = customFonts.find(f => f.id === fontId);
                 if (!existingFont) {
                     customFonts.push({ name: file.name, id: fontId, value: fontValue });
                     document.querySelectorAll('.fontFamily').forEach(select => {
-                        const option = document.createElement('option');
-                        option.value = fontValue; option.text = `[+] ${displayName}`; option.style.fontFamily = fontValue;
-                        select.appendChild(option);
+                        const option = document.createElement('option'); option.value = fontValue; option.text = `[+] ${displayName}`; option.style.fontFamily = fontValue; select.appendChild(option);
                     });
                 }
-
-                const buffer = await file.arrayBuffer();
-                const fontFace = new FontFace(fontId, buffer);
-                const loadedFont = await fontFace.load();
-                document.fonts.add(loadedFont);
-                
+                const buffer = await file.arrayBuffer(); const fontFace = new FontFace(fontId, buffer); const loadedFont = await fontFace.load(); document.fonts.add(loadedFont);
                 alert(`フォント「${displayName}」を読み込みました！`);
-                
-                document.querySelectorAll('.item').forEach(item => updatePreviewByElement(item));
-                renderPresets();
-                saveState();
+                document.querySelectorAll('.item').forEach(item => updatePreviewByElement(item)); renderPresets(); saveState();
             } catch (err) { alert("フォント読み込み失敗: " + err); }
         };
-        input.click();
-        closeAllMenus();
+        input.click(); closeAllMenus();
     }
 
     function syncVal(source, targetSelector) {
-        const parent = source.closest('.slider-group');
-        const target = parent.querySelector(targetSelector);
+        const parent = source.closest('.slider-group'); const target = parent.querySelector(targetSelector);
         if(target) target.value = source.value;
     }
 
-    function addItemAndSave() {
-        addItem();
-        saveState();
-        closeAllMenus();
-    }
+    function addItemAndSave() { addItem(); saveState(); closeAllMenus(); }
 
     function addItem(data = null, forceId = null) {
         const id = forceId !== null ? forceId : itemCount++;
@@ -626,21 +638,18 @@
         div.className = 'item'; div.dataset.id = id;
         
         let d = data;
-        
         if (!d) {
             if (defaultPresetId !== null) {
                 const dp = customPresets.find(p => p.id === defaultPresetId);
                 if (dp) {
                     d = { 
                         text: `Text`, font: dp.font, fWeight: dp.fWeight, 
-                        posX: dp.posX, posY: dp.posY, fSize: dp.fSize, 
-                        sWidth: dp.sWidth, fColor: dp.fColor, sColor: dp.sColor 
+                        posX: dp.posX, posY: dp.posY, fSize: dp.fSize, sWidth: dp.sWidth, fColor: dp.fColor, sColor: dp.sColor,
+                        vVoice: dp.vVoice, vPitch: dp.vPitch, vRate: dp.vRate, vVolume: dp.vVolume
                     };
                 }
             }
-            if (!d) {
-                d = { text: `Text`, font: "'Noto Sans JP', sans-serif", fWeight: "bold", posX: 0, posY: -120, fSize: 50, sWidth: 10, fColor: "#ffffff", sColor: "#000000" };
-            }
+            if (!d) d = { text: `Text`, font: "'Noto Sans JP', sans-serif", fWeight: "bold", posX: 0, posY: -120, fSize: 60, sWidth: 8, fColor: "#ffffff", sColor: "#000000", vVoice: "softalk_1", vPitch: 1, vRate: 1, vVolume: 1 };
         }
 
         let fontOptions = `
@@ -659,83 +668,127 @@
             <option value="sans-serif" style="font-family: sans-serif;">OS標準 ゴシック</option>
             <option value="serif" style="font-family: serif;">OS標準 明朝</option>
         `;
-        customFonts.forEach(cf => { 
-            const displayName = cf.name.split('.')[0];
-            fontOptions += `<option value='${cf.value}' style='font-family: ${cf.value};'>[+] ${displayName}</option>`; 
-        });
+        customFonts.forEach(cf => { fontOptions += `<option value='${cf.value}' style='font-family: ${cf.value};'>[+] ${cf.name.split('.')[0]}</option>`; });
 
         div.innerHTML = `
-            <div class="item-header" onclick="setActive(${id})">
+            <div class="item-header" onclick="toggleActive(${id})">
                 <span class="header-summary" id="summary-${id}">${d.text.split('\n')[0] || "(空)"}</span>
                 <div class="header-controls">
-                    <button class="btn-icon btn-mode" onclick="moveItem(this, -1); event.stopPropagation();">▲</button>
-                    <button class="btn-icon btn-mode" onclick="moveItem(this, 1); event.stopPropagation();">▼</button>
-                    <button class="btn-icon" style="background:var(--danger-bg);color:white" onclick="this.closest('.item').remove(); saveState(); event.stopPropagation();">×</button>
+                    <button class="btn-icon" onclick="moveItem(this, -1); event.stopPropagation();">▲</button>
+                    <button class="btn-icon" onclick="moveItem(this, 1); event.stopPropagation();">▼</button>
+                    <button class="btn-icon delete" onclick="this.closest('.item').remove(); saveState(); event.stopPropagation();">×</button>
                 </div>
             </div>
             <div class="item-body">
-                <label>字幕テキスト (Enterで改行)</label>
-                <textarea class="txt" oninput="updateSummary(${id}); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">${d.text}</textarea>
-                
-                <div class="font-row">
-                    <div style="flex: 2;">
-                        <label>フォント</label>
-                        <select class="fontFamily" onchange="updatePreviewByElement(this.closest('.item')); saveState()">${fontOptions}</select>
+                <div class="editor-col">
+                    <label class="col-title">字幕テキスト (Enterで改行)</label>
+                    <textarea class="txt" oninput="updateSummary(${id}); updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></textarea>
+                    
+                    <div class="font-row">
+                        <div style="flex: 2;">
+                            <label>フォント:</label>
+                            <select class="fontFamily" onchange="updatePreviewByElement(this.closest('.item')); saveState()">${fontOptions}</select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label>太さ:</label>
+                            <select class="fontWeight" onchange="updatePreviewByElement(this.closest('.item')); saveState()">
+                                <option value="normal">標準</option><option value="bold">太字</option><option value="900">極太</option>
+                            </select>
+                        </div>
                     </div>
-                    <div style="flex: 1;">
-                        <label>文字の太さ</label>
-                        <select class="fontWeight" onchange="updatePreviewByElement(this.closest('.item')); saveState()">
-                            <option value="normal">標準</option><option value="bold">太字</option><option value="900">極太</option>
-                        </select>
+
+                    <div class="controls-grid">
+                        <div class="control-unit"><label>X:</label>
+                            <div class="slider-group">
+                                <input type="range" class="posX" min="-240" max="240" value="${d.posX}" oninput="syncVal(this, '.posX-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                                <input type="number" class="posX-num num-input" value="${d.posX}" oninput="syncVal(this, '.posX'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            </div>
+                        </div>
+                        <div class="control-unit"><label>Y:</label>
+                            <div class="slider-group">
+                                <input type="range" class="posY" min="-180" max="180" value="${d.posY}" oninput="syncVal(this, '.posY-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                                <input type="number" class="posY-num num-input" value="${d.posY}" oninput="syncVal(this, '.posY'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            </div>
+                        </div>
+                        <div class="control-unit"><label>サイズ:</label>
+                            <div class="slider-group">
+                                <input type="range" class="fSize" min="10" max="150" value="${d.fSize}" oninput="syncVal(this, '.fSize-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                                <input type="number" class="fSize-num num-input" value="${d.fSize}" oninput="syncVal(this, '.fSize'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            </div>
+                        </div>
+                        <div class="control-unit"><label>枠線:</label>
+                            <div class="slider-group">
+                                <input type="range" class="sWidth" min="0" max="30" value="${d.sWidth}" oninput="syncVal(this, '.sWidth-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                                <input type="number" class="sWidth-num num-input" value="${d.sWidth}" oninput="syncVal(this, '.sWidth'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                            </div>
+                        </div>
+                        <div class="control-unit"><label>文字色:</label><input type="color" class="fColor" value="${d.fColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
+                        <div class="control-unit"><label>枠色:</label><input type="color" class="sColor" value="${d.sColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
                     </div>
                 </div>
 
-                <div class="controls-grid">
-                    <div class="control-unit"><label>X座標</label>
-                        <div class="slider-group">
-                            <input type="range" class="posX" min="-240" max="240" value="${d.posX}" oninput="syncVal(this, '.posX-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
-                            <input type="number" class="posX-num num-input" value="${d.posX}" oninput="syncVal(this, '.posX'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
+                <div class="editor-col">
+                    <label class="col-title">読み上げ用テキスト (空欄なら字幕と同じ)</label>
+                    <textarea class="vText" placeholder="※空欄の場合は字幕と同じテキストを読み上げます" oninput="saveState()"></textarea>
+                    
+                    <div>
+                        <label>声の種類 (VOICEVOX / 棒読みちゃん):</label>
+                        <select class="vVoice" data-current-voice="${d.vVoice || ''}" onchange="this.dataset.currentVoice=this.value; saveState()">
+                            <option value="">(読込中...)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="controls-grid">
+                        <div class="control-unit"><label>速度:</label>
+                            <div class="slider-group">
+                                <input type="range" class="vRate" min="0.5" max="2" step="0.1" value="${d.vRate !== undefined ? d.vRate : 1}" oninput="syncVal(this, '.vRate-num');" onchange="saveState()">
+                                <input type="number" class="vRate-num num-input" value="${d.vRate !== undefined ? d.vRate : 1}" step="0.1" oninput="syncVal(this, '.vRate');" onchange="saveState()">
+                            </div>
+                        </div>
+                        <div class="control-unit"><label>音量:</label>
+                            <div class="slider-group">
+                                <input type="range" class="vVolume" min="0" max="1" step="0.1" value="${d.vVolume !== undefined ? d.vVolume : 1}" oninput="syncVal(this, '.vVolume-num');" onchange="saveState()">
+                                <input type="number" class="vVolume-num num-input" value="${d.vVolume !== undefined ? d.vVolume : 1}" step="0.1" oninput="syncVal(this, '.vVolume');" onchange="saveState()">
+                            </div>
+                        </div>
+                        <div class="control-unit"><label>音程:</label>
+                            <div class="slider-group">
+                                <input type="range" class="vPitch" min="0" max="2" step="0.1" value="${d.vPitch !== undefined ? d.vPitch : 1}" oninput="syncVal(this, '.vPitch-num');" onchange="saveState()">
+                                <input type="number" class="vPitch-num num-input" value="${d.vPitch !== undefined ? d.vPitch : 1}" step="0.1" oninput="syncVal(this, '.vPitch');" onchange="saveState()">
+                            </div>
                         </div>
                     </div>
-                    <div class="control-unit"><label>Y座標</label>
-                        <div class="slider-group">
-                            <input type="range" class="posY" min="-180" max="180" value="${d.posY}" oninput="syncVal(this, '.posY-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
-                            <input type="number" class="posY-num num-input" value="${d.posY}" oninput="syncVal(this, '.posY'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
-                        </div>
-                    </div>
-                    <div class="control-unit"><label>文字サイズ</label>
-                        <div class="slider-group">
-                            <input type="range" class="fSize" min="10" max="150" value="${d.fSize}" oninput="syncVal(this, '.fSize-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
-                            <input type="number" class="fSize-num num-input" value="${d.fSize}" oninput="syncVal(this, '.fSize'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
-                        </div>
-                    </div>
-                    <div class="control-unit"><label>枠線サイズ</label>
-                        <div class="slider-group">
-                            <input type="range" class="sWidth" min="0" max="30" value="${d.sWidth}" oninput="syncVal(this, '.sWidth-num'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
-                            <input type="number" class="sWidth-num num-input" value="${d.sWidth}" oninput="syncVal(this, '.sWidth'); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">
-                        </div>
-                    </div>
-                    <div class="control-unit"><label>文字色</label><input type="color" class="fColor" value="${d.fColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
-                    <div class="control-unit"><label>枠色</label><input type="color" class="sColor" value="${d.sColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
+
+                    <button class="play-btn" onclick="playVoice(this.closest('.item'))">▶ プレビュー再生</button>
                 </div>
             </div>
         `;
         document.getElementById('itemList').appendChild(div);
         
+        div.querySelector('.txt').value = d.text;
+        div.querySelector('.vText').value = d.vText || "";
         div.querySelector('.fontFamily').value = d.font;
         div.querySelector('.fontWeight').value = d.fWeight || "bold";
+        
+        initVoices();
         setActive(id);
     }
 
-    function toggleTheme() { 
-        document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); 
-        closeAllMenus();
+    function toggleTheme() { document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); closeAllMenus(); }
+    
+    function toggleActive(id) {
+        const item = document.querySelector(`.item[data-id="${id}"]`);
+        const wasActive = item.classList.contains('active');
+        document.querySelectorAll('.item').forEach(el => el.classList.remove('active'));
+        if (!wasActive) { item.classList.add('active'); lastActiveId = id; updatePreviewByElement(item); }
     }
+
     function setActive(id) {
         lastActiveId = id;
         document.querySelectorAll('.item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.id) === id));
         updatePreviewByElement(document.querySelector(`.item[data-id="${id}"]`));
     }
+    
     function updateSummary(id) { document.getElementById(`summary-${id}`).innerText = document.querySelector(`.item[data-id="${id}"] .txt`).value.split('\n')[0] || "(空)"; }
     function moveItem(btn, dir) {
         const item = btn.closest('.item');
@@ -745,22 +798,17 @@
     }
 
     function drawItemToCanvas(ctx, item) {
-        const text = item.querySelector('.txt').value;
-        const font = item.querySelector('.fontFamily').value;
-        const fWeight = item.querySelector('.fontWeight').value;
-        const fSize = parseInt(item.querySelector('.fSize').value);
-        const posX = parseInt(item.querySelector('.posX').value);
-        const posY = parseInt(item.querySelector('.posY').value);
+        const text = item.querySelector('.txt').value; const font = item.querySelector('.fontFamily').value;
+        const fWeight = item.querySelector('.fontWeight').value; const fSize = parseInt(item.querySelector('.fSize').value);
+        const posX = parseInt(item.querySelector('.posX').value); const posY = parseInt(item.querySelector('.posY').value);
         
-        ctx.clearRect(0, 0, 480, 360);
+        ctx.save(); ctx.clearRect(0, 0, 960, 720); ctx.scale(2, 2);
         ctx.font = `${fWeight} ${fSize}px ${font}`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-        ctx.strokeStyle = item.querySelector('.sColor').value; 
-        ctx.lineWidth = parseInt(item.querySelector('.sWidth').value);
+        ctx.strokeStyle = item.querySelector('.sColor').value; ctx.lineWidth = parseInt(item.querySelector('.sWidth').value);
         ctx.fillStyle = item.querySelector('.fColor').value;
 
-        const lines = text.split('\n');
-        const lineHeight = fSize * 1.2;
+        const lines = text.split('\n'); const lineHeight = fSize * 1.2;
         const startY = (180 - posY) - ((lines.length - 1) * lineHeight) / 2;
 
         lines.forEach((line, index) => {
@@ -768,72 +816,57 @@
             if(ctx.lineWidth > 0) ctx.strokeText(line, 240 + posX, drawY);
             ctx.fillText(line, 240 + posX, drawY);
         });
+        ctx.restore();
     }
 
-    function updatePreviewByElement(item) {
-        if(!item) return;
-        const ctx = document.getElementById('previewCanvas').getContext('2d');
-        drawItemToCanvas(ctx, item);
-    }
+    function updatePreviewByElement(item) { if(!item) return; drawItemToCanvas(document.getElementById('previewCanvas').getContext('2d'), item); }
 
     function exportActiveImage() {
-        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`);
-        if (!item) return alert("字幕が選択されていません！");
-        const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 360;
-        drawItemToCanvas(canvas.getContext('2d'), item);
-        const link = document.createElement('a'); link.download = `subtitle_active.png`; link.href = canvas.toDataURL('image/png'); link.click();
-        closeAllMenus();
+        const item = document.querySelector(`.item[data-id="${lastActiveId}"]`); if (!item) return alert("字幕が選択されていません！");
+        const canvas = document.createElement('canvas'); canvas.width = 960; canvas.height = 720; drawItemToCanvas(canvas.getContext('2d'), item);
+        const link = document.createElement('a'); link.download = `subtitle_active.png`; link.href = canvas.toDataURL('image/png'); link.click(); closeAllMenus();
     }
     function exportAllImages() {
-        const items = document.querySelectorAll('.item');
-        if (items.length === 0) return alert("出力する字幕がありません！");
+        const items = document.querySelectorAll('.item'); if (items.length === 0) return alert("出力する字幕がありません！");
         if(!confirm(`全 ${items.length} 枚の画像を連続でダウンロードします。`)) return;
-        const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 360; const ctx = canvas.getContext('2d');
+        const canvas = document.createElement('canvas'); canvas.width = 960; canvas.height = 720; const ctx = canvas.getContext('2d');
         items.forEach((item, index) => {
             setTimeout(() => {
-                drawItemToCanvas(ctx, item);
-                const link = document.createElement('a'); link.download = `subtitle_${String(index + 1).padStart(3, '0')}.png`; link.href = canvas.toDataURL('image/png'); link.click();
+                drawItemToCanvas(ctx, item); const link = document.createElement('a'); link.download = `subtitle_${String(index + 1).padStart(3, '0')}.png`; link.href = canvas.toDataURL('image/png'); link.click();
             }, index * 200);
         });
         closeAllMenus();
     }
     async function exportImageZip() {
-        const items = document.querySelectorAll('.item');
-        if (items.length === 0) return alert("出力する字幕がありません！");
+        const items = document.querySelectorAll('.item'); if (items.length === 0) return alert("出力する字幕がありません！");
         let zipName = prompt("ZIPファイルの名前を入力", "subtitles");
         if (!zipName) return; if (!zipName.endsWith('.zip')) zipName += '.zip';
-        const zip = new JSZip(); const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 360; const ctx = canvas.getContext('2d');
+        const zip = new JSZip(); const canvas = document.createElement('canvas'); canvas.width = 960; canvas.height = 720; const ctx = canvas.getContext('2d');
         for (let i = 0; i < items.length; i++) {
-            drawItemToCanvas(ctx, items[i]);
-            zip.file(`subtitle_${String(i + 1).padStart(3, '0')}.png`, canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ""), {base64: true});
+            drawItemToCanvas(ctx, items[i]); zip.file(`subtitle_${String(i + 1).padStart(3, '0')}.png`, canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ""), {base64: true});
         }
         try {
-            const content = await zip.generateAsync({type: "uint8array"});
-            const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([content], {type: "application/zip"})); link.download = zipName; link.click();
+            const content = await zip.generateAsync({type: "uint8array"}); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([content], {type: "application/zip"})); link.download = zipName; link.click();
         } catch(err) { alert("ZIPの作成に失敗しました: " + err); }
         closeAllMenus();
     }
 
     function saveProject() {
         const projectData = {
-            customPresets: customPresets,
-            customFonts: customFonts, 
-            defaultPresetId: defaultPresetId,
+            customPresets: customPresets, customFonts: customFonts, defaultPresetId: defaultPresetId,
             items: Array.from(document.querySelectorAll('.item')).map(item => ({
-                text: item.querySelector('.txt').value,
-                font: item.querySelector('.fontFamily').value,
-                fWeight: item.querySelector('.fontWeight').value,
-                posX: item.querySelector('.posX').value,
-                posY: item.querySelector('.posY').value,
-                fSize: item.querySelector('.fSize').value,
-                sWidth: item.querySelector('.sWidth').value,
-                fColor: item.querySelector('.fColor').value,
-                sColor: item.querySelector('.sColor').value
+                text: item.querySelector('.txt').value, font: item.querySelector('.fontFamily').value,
+                fWeight: item.querySelector('.fontWeight').value, posX: item.querySelector('.posX').value,
+                posY: item.querySelector('.posY').value, fSize: item.querySelector('.fSize').value,
+                sWidth: item.querySelector('.sWidth').value, fColor: item.querySelector('.fColor').value,
+                sColor: item.querySelector('.sColor').value, vText: item.querySelector('.vText').value,
+                vVoice: item.querySelector('.vVoice').value, vPitch: item.querySelector('.vPitch').value,
+                vRate: item.querySelector('.vRate').value, vVolume: item.querySelector('.vVolume').value,
+                isActive: item.classList.contains('active')
             }))
         };
         const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jimaku_project.json'; a.click();
-        closeAllMenus();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jimaku_project.json'; a.click(); closeAllMenus();
     }
 
     function loadProject() {
@@ -844,32 +877,20 @@
             reader.onload = (ev) => {
                 try {
                     const data = JSON.parse(ev.target.result);
-                    if(data.customPresets) customPresets = data.customPresets;
-                    if(data.customFonts) customFonts = data.customFonts; 
-                    if(data.defaultPresetId !== undefined) defaultPresetId = data.defaultPresetId;
-                    renderPresets();
-                    
-                    document.getElementById('itemList').innerHTML = '';
-                    itemCount = 0;
-                    historyStack = []; 
-                    historyIndex = -1;
-                    
+                    if(data.customPresets) customPresets = data.customPresets; if(data.customFonts) customFonts = data.customFonts; if(data.defaultPresetId !== undefined) defaultPresetId = data.defaultPresetId;
+                    renderPresets(); document.getElementById('itemList').innerHTML = ''; itemCount = 0; historyStack = []; historyIndex = -1;
                     if (data.items && data.items.length > 0) {
-                        data.items.forEach(itemData => addItem(itemData));
+                        data.items.forEach(itemData => { addItem(itemData); if(!itemData.isActive) document.querySelector(`.item[data-id="${itemCount-1}"]`).classList.remove('active'); });
                     } else { addItem(); }
                     saveState(); 
                 } catch (err) { alert("プロジェクトファイルの読み込みに失敗しました。"); }
             };
             reader.readAsText(file);
         };
-        input.click();
-        closeAllMenus();
+        input.click(); closeAllMenus();
     }
     
-    addItem();
-    saveState();
-    renderPresets();
-    changeBG('bg-white'); 
+    addItem(); saveState(); renderPresets(); changeBG('bg-white'); 
 </script>
 </body>
 </html>
