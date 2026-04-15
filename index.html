@@ -19,7 +19,6 @@
             --accent-color: #3b82f6; 
             --danger-bg: #ef4444;
             --success-bg: #10b981;
-            --voice-bg: #8b5cf6;
             --menu-hover: #2563eb;
             --tab-bg: #0f172a;
         }
@@ -30,7 +29,6 @@
             --panel-border: #cbd5e1; 
             --input-bg: #f8fafc; 
             --accent-color: #2563eb; 
-            --voice-bg: #7c3aed;
             --menu-hover: #bfdbfe;
             --tab-bg: #e2e8f0;
         }
@@ -60,7 +58,7 @@
         .header-title { position: absolute; right: 16px; font-weight: normal; font-size: 1.1em; pointer-events: none; color: var(--text-color); letter-spacing: 0.05em; }
         body[data-layout="mobile"] .header-title { display: none; }
 
-        .dropdown { display: none; position: absolute; top: 32px; left: 0; background: var(--panel-bg); border: 1px solid var(--panel-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 220px; white-space: nowrap; padding: 6px 0; border-radius: 0 0 6px 6px; z-index: 9999; }
+        .dropdown { display: none; position: absolute; top: 32px; left: 0; background: var(--panel-bg); border: 1px solid var(--panel-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 220px; white-space: nowrap; padding: 6px 0; border-radius: 0 0 6px 6px; z-index: 2001; }
         .dropdown.show { display: block; }
         .dropdown-item { padding: 8px 16px; cursor: pointer; color: var(--text-color); display: flex; justify-content: space-between; gap: 24px; align-items: center; }
         .dropdown-item:hover { background: var(--menu-hover); }
@@ -122,7 +120,7 @@
         textarea.txt { padding: 6px 8px; height: 50px; resize: vertical; line-height: 1.4; }
         select { padding: 0 4px; line-height: 32px; text-overflow: ellipsis; } 
         
-        textarea.txt:focus, select:focus, input[type="text"]:focus { outline: none; border-color: var(--accent-color); }
+        textarea.txt:focus, select:focus { outline: none; border-color: var(--accent-color); }
         input[type="color"] { width: 100%; height: 34px; padding: 1px; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; background: var(--input-bg); }
         
         .slider-group { display: flex; gap: 8px; align-items: center; width: 100%; }
@@ -133,15 +131,10 @@
         .btn-icon { width: 26px; height: 26px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 0.9em; line-height: 1; }
         .btn-mode { background: var(--panel-border); color: var(--text-color); }
         .add-btn { background: var(--success-bg); color: white; padding: 10px; width: 100%; margin-bottom: 12px; font-size: 0.9em; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .apply-btn { background: var(--accent-color); color: white; padding: 6px 10px; font-size: 0.85em; }
-        .play-btn { background: var(--voice-bg); color: white; padding: 6px 10px; font-size: 0.85em; }
+        .apply-btn { background: var(--accent-color); color: white; padding: 6px 14px; font-size: 0.85em; }
         
         .font-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; width: 100%; }
         .font-row > div { min-width: 0; }
-
-        /* 音声セクション */
-        .voice-section { margin-top: 15px; padding-top: 12px; border-top: 1px dashed var(--panel-border); background: rgba(0,0,0,0.02); border-radius: 0 0 8px 8px;}
-        [data-theme="dark"] .voice-section { background: rgba(255,255,255,0.02); }
 
         .preset-area::-webkit-scrollbar { width: 6px; }
         .preset-area::-webkit-scrollbar-track { background: transparent; }
@@ -178,8 +171,6 @@
     </div>
     <div class="menu-item" onclick="toggleMenu('menu-view', event)">表示
         <div class="dropdown" id="menu-view">
-            <div class="dropdown-item" onclick="togglePreview()" style="font-weight:bold;"><span>プレビューの表示／非表示</span></div>
-            <div class="dropdown-divider"></div>
             <div class="dropdown-item" onclick="setLayout('pc')" style="color:var(--accent-color); font-weight:bold;"><span>PCモードに変更</span></div>
             <div class="dropdown-item" onclick="setLayout('mobile')" style="color:var(--success-bg); font-weight:bold;"><span>モバイルモードに変更</span></div>
             <div class="dropdown-divider"></div>
@@ -200,7 +191,7 @@
         <div id="presetList"></div>
     </div>
 
-    <div class="preview-area" id="previewAreaWrapper">
+    <div class="preview-area">
         <div id="screen" class="scratch-screen">
             <canvas id="previewCanvas" width="960" height="720"></canvas>
         </div>
@@ -228,31 +219,6 @@
     let historyIndex = -1;
     let isUndoing = false;
 
-    // --- 音声(Web Speech API)関連の初期化 ---
-    let availableVoices = [];
-    function initVoices() {
-        availableVoices = window.speechSynthesis.getVoices();
-        document.querySelectorAll('.vVoice').forEach(select => {
-            const currentVal = select.dataset.currentVoice || select.value;
-            select.innerHTML = '<option value="">(ブラウザの標準音声)</option>';
-            availableVoices.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = v.voiceURI;
-                opt.textContent = `${v.name} (${v.lang})`;
-                select.appendChild(opt);
-            });
-            if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
-                select.value = currentVal;
-            }
-        });
-    }
-    // 音声リストがロードされたタイミングでセット
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = initVoices;
-    }
-    // 保険として少し遅れても実行
-    setTimeout(initVoices, 200);
-
     // --- Undo / Redo ---
     function getCurrentState() {
         return {
@@ -268,13 +234,7 @@
                 fSize: item.querySelector('.fSize').value,
                 sWidth: item.querySelector('.sWidth').value,
                 fColor: item.querySelector('.fColor').value,
-                sColor: item.querySelector('.sColor').value,
-                // 音声設定も保存
-                vText: item.querySelector('.vText').value,
-                vVoice: item.querySelector('.vVoice').value,
-                vPitch: item.querySelector('.vPitch').value,
-                vRate: item.querySelector('.vRate').value,
-                isActive: item.classList.contains('active')
+                sColor: item.querySelector('.sColor').value
             }))
         };
     }
@@ -299,14 +259,8 @@
         isUndoing = true;
         itemCount = state.itemCount;
         document.getElementById('itemList').innerHTML = '';
-        state.items.forEach(itemData => {
-            addItem(itemData, itemData.id);
-            const el = document.querySelector(`.item[data-id="${itemData.id}"]`);
-            if (itemData.isActive) el.classList.add('active');
-            else el.classList.remove('active');
-        });
-        lastActiveId = state.lastActiveId;
-        updatePreviewByElement(document.querySelector(`.item[data-id="${lastActiveId}"]`));
+        state.items.forEach(itemData => addItem(itemData, itemData.id));
+        setActive(state.lastActiveId);
         isUndoing = false;
     }
 
@@ -347,17 +301,28 @@
         if (!isShowing) { 
             menu.classList.add('show'); 
             parent.classList.add('active'); 
-            if (menuId === 'menu-edit') updateEditMenu();
+            if (menuId === 'menu-edit') {
+                updateEditMenu();
+            }
         }
     }
 
     function updateEditMenu() {
         const undoBtn = document.getElementById('menu-undo');
         const redoBtn = document.getElementById('menu-redo');
-        if (undoBtn) undoBtn.classList.toggle('disabled', historyIndex <= 0);
-        if (redoBtn) redoBtn.classList.toggle('disabled', historyIndex >= historyStack.length - 1);
+        if (undoBtn) {
+            if (historyIndex > 0) undoBtn.classList.remove('disabled');
+            else undoBtn.classList.add('disabled');
+        }
+        if (redoBtn) {
+            if (historyIndex < historyStack.length - 1) redoBtn.classList.remove('disabled');
+            else redoBtn.classList.add('disabled');
+        }
         const resetDefaultBtn = document.getElementById('menu-reset-default');
-        if (resetDefaultBtn) resetDefaultBtn.classList.toggle('disabled', defaultPresetId === null);
+        if (resetDefaultBtn) {
+            if (defaultPresetId === null) resetDefaultBtn.classList.add('disabled');
+            else resetDefaultBtn.classList.remove('disabled');
+        }
     }
 
     function togglePresetMenu(id, event) {
@@ -367,42 +332,25 @@
         closeAllMenus();
         if (!isShowing) { 
             menu.classList.add('show'); 
-            menu.style.position = 'fixed'; 
-            
-            const btnRect = event.target.getBoundingClientRect();
+            const rect = event.target.getBoundingClientRect();
             const menuRect = menu.getBoundingClientRect();
-            
-            let topPos = btnRect.bottom;
-            let leftPos = btnRect.right - menuRect.width;
-
-            if (topPos + menuRect.height > window.innerHeight) {
-                topPos = btnRect.top - menuRect.height;
+            if (rect.bottom + menuRect.height > window.innerHeight) {
+                menu.style.top = 'auto';
+                menu.style.bottom = '100%';
                 menu.style.borderRadius = '6px 0 6px 6px';
             } else {
+                menu.style.top = '100%';
+                menu.style.bottom = 'auto';
                 menu.style.borderRadius = '0 0 6px 6px';
             }
-            
-            menu.style.top = topPos + 'px';
-            menu.style.left = leftPos + 'px';
         }
     }
 
     function closeAllMenus() {
-        document.querySelectorAll('.dropdown').forEach(m => {
-            m.classList.remove('show');
-            if (m.id.startsWith('preset-menu-')) {
-                m.style.position = '';
-                m.style.top = '';
-                m.style.left = '';
-            }
-        });
+        document.querySelectorAll('.dropdown').forEach(m => m.classList.remove('show'));
         document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
     }
-    
     document.addEventListener('click', closeAllMenus);
-    window.addEventListener('scroll', function(e) {
-        if (document.querySelector('.dropdown.show')) closeAllMenus();
-    }, true);
 
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey)) {
@@ -413,39 +361,8 @@
     });
 
     function showAboutDialog() {
-        alert("Scratch Text Generator\nVersion 1.3\n制作：とぅもろー / Geminiで制作");
+        alert("Scratch Text Generator\nVersion 1.0\n制作：とぅもろー / Geminiで制作");
         closeAllMenus();
-    }
-    
-    function togglePreview() {
-        const previewArea = document.getElementById('previewAreaWrapper');
-        previewArea.style.display = previewArea.style.display === 'none' ? '' : 'none';
-        closeAllMenus();
-    }
-
-    // --- 音声再生 ---
-    function playVoice(item) {
-        const vText = item.querySelector('.vText').value;
-        const subText = item.querySelector('.txt').value;
-        const textToSpeak = vText.trim() !== "" ? vText : subText;
-
-        if (!textToSpeak) return alert("読み上げるテキストがありません。");
-
-        const synth = window.speechSynthesis;
-        synth.cancel(); // 前の音声を停止
-
-        const utterThis = new SpeechSynthesisUtterance(textToSpeak);
-        const selectedVoiceURI = item.querySelector('.vVoice').value;
-        
-        if (selectedVoiceURI) {
-            const voice = availableVoices.find(v => v.voiceURI === selectedVoiceURI);
-            if (voice) utterThis.voice = voice;
-        }
-
-        utterThis.pitch = parseFloat(item.querySelector('.vPitch').value);
-        utterThis.rate = parseFloat(item.querySelector('.vRate').value);
-        
-        synth.speak(utterThis);
     }
 
     // --- Preset Control ---
@@ -466,17 +383,15 @@
             fColor: item.querySelector('.fColor').value, 
             sColor: item.querySelector('.sColor').value, 
             font: item.querySelector('.fontFamily').value, 
-            fWeight: item.querySelector('.fontWeight').value,
-            // 音声設定もプリセットに含める（テキストは固有なので除外）
-            vVoice: item.querySelector('.vVoice').value,
-            vPitch: item.querySelector('.vPitch').value,
-            vRate: item.querySelector('.vRate').value
+            fWeight: item.querySelector('.fontWeight').value
         };
 
         customPresets.push(newPreset);
         renderPresets();
         
-        if(document.body.getAttribute('data-layout') === 'mobile') alert(`「${name}」を保存しました！`);
+        if(document.body.getAttribute('data-layout') === 'mobile') {
+            alert(`「${name}」を保存しました！`);
+        }
     }
 
     function renderPresets() {
@@ -512,10 +427,9 @@
                     </div>
                     <div style="display:flex; gap:6px; align-items:center;">
                         <button class="apply-btn" onclick="applyPreset(${p.id})">適用</button>
-                        <button class="apply-btn" style="background:var(--success-bg);" onclick="createFromPreset(${p.id})">作成</button>
                         <div style="position:relative;">
                             <button class="btn-icon" style="background:transparent; color:var(--text-color); font-size:1.2em; border:1px solid var(--panel-border);" onclick="togglePresetMenu(${p.id}, event)">︙</button>
-                            <div class="dropdown" id="preset-menu-${p.id}">
+                            <div class="dropdown" id="preset-menu-${p.id}" style="right:0; left:auto;">
                                 <div class="dropdown-item" onclick="toggleDefaultPreset(${p.id})"><span>${isDefault ? 'デフォルトを解除' : 'デフォルトに設定'}</span></div>
                                 <div class="dropdown-item" onclick="renamePreset(${p.id})"><span>名称変更</span></div>
                                 <div class="dropdown-item" onclick="updatePreset(${p.id})"><span>更新 (今のスタイルで上書き)</span></div>
@@ -543,42 +457,18 @@
         item.querySelector('.fColor').value = p.fColor; item.querySelector('.sColor').value = p.sColor; 
         item.querySelector('.fontFamily').value = p.font;
         item.querySelector('.fontWeight').value = p.fWeight;
-
-        // 音声設定の適用
-        if (p.vVoice !== undefined) {
-            item.querySelector('.vVoice').dataset.currentVoice = p.vVoice;
-            initVoices(); // セレクトボックスの再描画
-        }
-        if (p.vPitch !== undefined) {
-            item.querySelector('.vPitch').value = p.vPitch; item.querySelector('.vPitch-num').value = p.vPitch;
-        }
-        if (p.vRate !== undefined) {
-            item.querySelector('.vRate').value = p.vRate; item.querySelector('.vRate-num').value = p.vRate;
-        }
         
         updatePreviewByElement(item);
         saveState();
-        if(document.body.getAttribute('data-layout') === 'mobile') setMobileTab('editor');
-    }
-
-    function createFromPreset(id) {
-        const p = customPresets.find(preset => preset.id === id);
-        if (!p) return;
         
-        const newData = {
-            text: `Text`, font: p.font, fWeight: p.fWeight, 
-            posX: p.posX, posY: p.posY, fSize: p.fSize, 
-            sWidth: p.sWidth, fColor: p.fColor, sColor: p.sColor,
-            vVoice: p.vVoice, vPitch: p.vPitch, vRate: p.vRate
-        };
-        
-        addItem(newData);
-        saveState();
-        if(document.body.getAttribute('data-layout') === 'mobile') setMobileTab('editor');
+        if(document.body.getAttribute('data-layout') === 'mobile') {
+            setMobileTab('editor');
+        }
     }
 
     function toggleDefaultPreset(id) {
-        defaultPresetId = defaultPresetId === id ? null : id;
+        if (defaultPresetId === id) defaultPresetId = null; 
+        else defaultPresetId = id; 
         renderPresets();
         closeAllMenus();
     }
@@ -595,7 +485,10 @@
         const p = customPresets.find(preset => preset.id === id);
         if (!p) return;
         const newName = prompt("新しい名前を入力してください:", p.name);
-        if (newName && newName.trim() !== "") { p.name = newName.trim(); renderPresets(); }
+        if (newName && newName.trim() !== "") {
+            p.name = newName.trim();
+            renderPresets();
+        }
         closeAllMenus();
     }
 
@@ -606,12 +499,14 @@
         if(!item) return alert("現在のスタイルを取得する字幕を選択してください。");
 
         if(confirm(`プリセット「${p.name}」を、現在選択中のスタイルで上書きしますか？`)) {
-            p.posX = item.querySelector('.posX').value; p.posY = item.querySelector('.posY').value;
-            p.fSize = item.querySelector('.fSize').value; p.sWidth = item.querySelector('.sWidth').value;
-            p.fColor = item.querySelector('.fColor').value; p.sColor = item.querySelector('.sColor').value;
-            p.font = item.querySelector('.fontFamily').value; p.fWeight = item.querySelector('.fontWeight').value;
-            p.vVoice = item.querySelector('.vVoice').value;
-            p.vPitch = item.querySelector('.vPitch').value; p.vRate = item.querySelector('.vRate').value;
+            p.posX = item.querySelector('.posX').value;
+            p.posY = item.querySelector('.posY').value;
+            p.fSize = item.querySelector('.fSize').value;
+            p.sWidth = item.querySelector('.sWidth').value;
+            p.fColor = item.querySelector('.fColor').value;
+            p.sColor = item.querySelector('.sColor').value;
+            p.font = item.querySelector('.fontFamily').value;
+            p.fWeight = item.querySelector('.fontWeight').value;
             renderPresets();
         }
         closeAllMenus();
@@ -630,9 +525,15 @@
     function newProject() {
         if(confirm("現在の作業内容を破棄して新しく作り直しますか？")) {
             document.getElementById('itemList').innerHTML = '';
-            itemCount = 0; customPresets = []; customFonts = []; defaultPresetId = null; historyStack = []; historyIndex = -1;
-            renderPresets(); addItemAndSave(); changeBG('bg-white'); 
-            document.getElementById('previewAreaWrapper').style.display = ''; 
+            itemCount = 0;
+            customPresets = [];
+            customFonts = []; 
+            defaultPresetId = null;
+            historyStack = []; 
+            historyIndex = -1;
+            renderPresets();
+            addItemAndSave();
+            changeBG('bg-white'); 
         }
         closeAllMenus();
     }
@@ -657,14 +558,16 @@
         const screen = document.getElementById('screen');
         screen.style.backgroundImage = 'none';
         document.getElementById('menuClearBg').style.display = 'none';
-        changeBG('bg-white'); closeAllMenus();
+        changeBG('bg-white');
+        closeAllMenus();
     }
     function changeBG(c) {
         const s = document.getElementById('screen');
         s.style.backgroundColor = c === 'bg-black' ? '#000' : c === 'bg-white' ? '#fff' : 'transparent';
         s.style.backgroundImage = c === 'bg-grid' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)' : 'none';
         if(c === 'bg-grid') { s.style.backgroundSize = '20px 20px'; s.style.backgroundPosition = '0 0, 10px 10px'; }
-        document.getElementById('menuClearBg').style.display = 'none'; closeAllMenus();
+        document.getElementById('menuClearBg').style.display = 'none';
+        closeAllMenus();
     }
 
     async function loadCustomFont() {
@@ -692,11 +595,14 @@
                 document.fonts.add(loadedFont);
                 
                 alert(`フォント「${displayName}」を読み込みました！`);
+                
                 document.querySelectorAll('.item').forEach(item => updatePreviewByElement(item));
-                renderPresets(); saveState();
+                renderPresets();
+                saveState();
             } catch (err) { alert("フォント読み込み失敗: " + err); }
         };
-        input.click(); closeAllMenus();
+        input.click();
+        closeAllMenus();
     }
 
     function syncVal(source, targetSelector) {
@@ -705,7 +611,11 @@
         if(target) target.value = source.value;
     }
 
-    function addItemAndSave() { addItem(); saveState(); closeAllMenus(); }
+    function addItemAndSave() {
+        addItem();
+        saveState();
+        closeAllMenus();
+    }
 
     function addItem(data = null, forceId = null) {
         const id = forceId !== null ? forceId : itemCount++;
@@ -713,6 +623,7 @@
         div.className = 'item'; div.dataset.id = id;
         
         let d = data;
+        
         if (!d) {
             if (defaultPresetId !== null) {
                 const dp = customPresets.find(p => p.id === defaultPresetId);
@@ -720,12 +631,13 @@
                     d = { 
                         text: `Text`, font: dp.font, fWeight: dp.fWeight, 
                         posX: dp.posX, posY: dp.posY, fSize: dp.fSize, 
-                        sWidth: dp.sWidth, fColor: dp.fColor, sColor: dp.sColor,
-                        vVoice: dp.vVoice, vPitch: dp.vPitch, vRate: dp.vRate
+                        sWidth: dp.sWidth, fColor: dp.fColor, sColor: dp.sColor 
                     };
                 }
             }
-            if (!d) d = { text: `Text`, font: "'Noto Sans JP', sans-serif", fWeight: "normal", posX: 0, posY: -120, fSize: 50, sWidth: 10, fColor: "#ffffff", sColor: "#000000" };
+            if (!d) {
+                d = { text: `Text`, font: "'Noto Sans JP', sans-serif", fWeight: "bold", posX: 0, posY: -120, fSize: 50, sWidth: 10, fColor: "#ffffff", sColor: "#000000" };
+            }
         }
 
         let fontOptions = `
@@ -750,7 +662,7 @@
         });
 
         div.innerHTML = `
-            <div class="item-header" onclick="toggleActive(${id})">
+            <div class="item-header" onclick="setActive(${id})">
                 <span class="header-summary" id="summary-${id}">${d.text.split('\n')[0] || "(空)"}</span>
                 <div class="header-controls">
                     <button class="btn-icon btn-mode" onclick="moveItem(this, -1); event.stopPropagation();">▲</button>
@@ -760,7 +672,7 @@
             </div>
             <div class="item-body">
                 <label>字幕テキスト (Enterで改行)</label>
-                <textarea class="txt" oninput="updateSummary(${id}); updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></textarea>
+                <textarea class="txt" oninput="updateSummary(${id}); updatePreviewByElement(this.closest('.item'))" onchange="saveState()">${d.text}</textarea>
                 
                 <div class="font-row">
                     <div style="flex: 2;">
@@ -803,50 +715,12 @@
                     <div class="control-unit"><label>文字色</label><input type="color" class="fColor" value="${d.fColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
                     <div class="control-unit"><label>枠色</label><input type="color" class="sColor" value="${d.sColor}" oninput="updatePreviewByElement(this.closest('.item'))" onchange="saveState()"></div>
                 </div>
-
-                <div class="voice-section">
-                    <label style="color: var(--voice-bg);">音声読み上げ (Web Speech API)</label>
-                    <div style="margin: 8px 0;">
-                        <input type="text" class="vText" placeholder="空欄の場合は上の字幕テキストを読み上げます" oninput="saveState()" style="margin-bottom: 8px;">
-                    </div>
-                    
-                    <div class="font-row" style="margin-top: 0;">
-                        <div style="flex: 2;">
-                            <label>話者 (Voice)</label>
-                            <select class="vVoice" data-current-voice="${d.vVoice || ''}" onchange="this.dataset.currentVoice=this.value; saveState()">
-                                <option value="">(ブラウザの標準音声)</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1; display: flex; align-items: flex-end;">
-                            <button class="play-btn" style="width: 100%; height: 34px;" onclick="playVoice(this.closest('.item'))">▶ 再生</button>
-                        </div>
-                    </div>
-                    
-                    <div class="controls-grid" style="margin-top: 8px;">
-                        <div class="control-unit"><label>高さ (Pitch)</label>
-                            <div class="slider-group">
-                                <input type="range" class="vPitch" min="0" max="2" step="0.1" value="${d.vPitch !== undefined ? d.vPitch : 1}" oninput="syncVal(this, '.vPitch-num');" onchange="saveState()">
-                                <input type="number" class="vPitch-num num-input" value="${d.vPitch !== undefined ? d.vPitch : 1}" step="0.1" oninput="syncVal(this, '.vPitch');" onchange="saveState()">
-                            </div>
-                        </div>
-                        <div class="control-unit"><label>速度 (Rate)</label>
-                            <div class="slider-group">
-                                <input type="range" class="vRate" min="0.5" max="2" step="0.1" value="${d.vRate !== undefined ? d.vRate : 1}" oninput="syncVal(this, '.vRate-num');" onchange="saveState()">
-                                <input type="number" class="vRate-num num-input" value="${d.vRate !== undefined ? d.vRate : 1}" step="0.1" oninput="syncVal(this, '.vRate');" onchange="saveState()">
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         `;
         document.getElementById('itemList').appendChild(div);
         
-        div.querySelector('.txt').value = d.text;
-        div.querySelector('.vText').value = d.vText || "";
         div.querySelector('.fontFamily').value = d.font;
-        div.querySelector('.fontWeight').value = d.fWeight || "normal";
-        
-        initVoices(); // 新しく追加されたアイテムの話者リストを更新
+        div.querySelector('.fontWeight').value = d.fWeight || "bold";
         setActive(id);
     }
 
@@ -854,24 +728,11 @@
         document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); 
         closeAllMenus();
     }
-    
-    function toggleActive(id) {
-        const item = document.querySelector(`.item[data-id="${id}"]`);
-        const wasActive = item.classList.contains('active');
-        document.querySelectorAll('.item').forEach(el => el.classList.remove('active'));
-        if (!wasActive) {
-            item.classList.add('active');
-            lastActiveId = id;
-            updatePreviewByElement(item);
-        }
-    }
-
     function setActive(id) {
         lastActiveId = id;
         document.querySelectorAll('.item').forEach(el => el.classList.toggle('active', parseInt(el.dataset.id) === id));
         updatePreviewByElement(document.querySelector(`.item[data-id="${id}"]`));
     }
-    
     function updateSummary(id) { document.getElementById(`summary-${id}`).innerText = document.querySelector(`.item[data-id="${id}"] .txt`).value.split('\n')[0] || "(空)"; }
     function moveItem(btn, dir) {
         const item = btn.closest('.item');
@@ -913,12 +774,14 @@
 
     function updatePreviewByElement(item) {
         if(!item) return;
-        drawItemToCanvas(document.getElementById('previewCanvas').getContext('2d'), item);
+        const ctx = document.getElementById('previewCanvas').getContext('2d');
+        drawItemToCanvas(ctx, item);
     }
 
     function exportActiveImage() {
         const item = document.querySelector(`.item[data-id="${lastActiveId}"]`);
         if (!item) return alert("字幕が選択されていません！");
+        // 書き出し用キャンバスも960x720に変更
         const canvas = document.createElement('canvas'); canvas.width = 960; canvas.height = 720;
         drawItemToCanvas(canvas.getContext('2d'), item);
         const link = document.createElement('a'); link.download = `subtitle_active.png`; link.href = canvas.toDataURL('image/png'); link.click();
@@ -928,6 +791,7 @@
         const items = document.querySelectorAll('.item');
         if (items.length === 0) return alert("出力する字幕がありません！");
         if(!confirm(`全 ${items.length} 枚の画像を連続でダウンロードします。`)) return;
+        // 書き出し用キャンバスも960x720に変更
         const canvas = document.createElement('canvas'); canvas.width = 960; canvas.height = 720; const ctx = canvas.getContext('2d');
         items.forEach((item, index) => {
             setTimeout(() => {
@@ -942,6 +806,7 @@
         if (items.length === 0) return alert("出力する字幕がありません！");
         let zipName = prompt("ZIPファイルの名前を入力", "subtitles");
         if (!zipName) return; if (!zipName.endsWith('.zip')) zipName += '.zip';
+        // 書き出し用キャンバスも960x720に変更
         const zip = new JSZip(); const canvas = document.createElement('canvas'); canvas.width = 960; canvas.height = 720; const ctx = canvas.getContext('2d');
         for (let i = 0; i < items.length; i++) {
             drawItemToCanvas(ctx, items[i]);
@@ -968,12 +833,7 @@
                 fSize: item.querySelector('.fSize').value,
                 sWidth: item.querySelector('.sWidth').value,
                 fColor: item.querySelector('.fColor').value,
-                sColor: item.querySelector('.sColor').value,
-                vText: item.querySelector('.vText').value,
-                vVoice: item.querySelector('.vVoice').value,
-                vPitch: item.querySelector('.vPitch').value,
-                vRate: item.querySelector('.vRate').value,
-                isActive: item.classList.contains('active')
+                sColor: item.querySelector('.sColor').value
             }))
         };
         const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
@@ -995,20 +855,20 @@
                     renderPresets();
                     
                     document.getElementById('itemList').innerHTML = '';
-                    itemCount = 0; historyStack = []; historyIndex = -1;
+                    itemCount = 0;
+                    historyStack = []; 
+                    historyIndex = -1;
                     
                     if (data.items && data.items.length > 0) {
-                        data.items.forEach(itemData => {
-                            addItem(itemData);
-                            if(!itemData.isActive) document.querySelector(`.item[data-id="${itemCount-1}"]`).classList.remove('active');
-                        });
+                        data.items.forEach(itemData => addItem(itemData));
                     } else { addItem(); }
                     saveState(); 
                 } catch (err) { alert("プロジェクトファイルの読み込みに失敗しました。"); }
             };
             reader.readAsText(file);
         };
-        input.click(); closeAllMenus();
+        input.click();
+        closeAllMenus();
     }
     
     addItem();
